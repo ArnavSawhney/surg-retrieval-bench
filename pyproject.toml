@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "surg-retrieval-bench"
+version = "0.1.0"
+description = "Reproducible benchmark of vision-language models for text-to-frame retrieval on laparoscopic cholecystectomy video"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Arnav Sawhney", email = "arnav.sawhney.ug23@plaksha.edu.in" }]
+requires-python = ">=3.11,<3.12"
+
+# Versions are pinned exactly (see docs: "Pin versions after install").
+# SurgVLP / PeskaVLP are deliberately NOT here: they need a separate env
+# (mmengine + OpenAI CLIP pins conflict with transformers). See LOG.md.
+dependencies = [
+  "numpy==2.4.6",
+  "pandas==3.0.6",
+  "pyarrow==25.0.1",
+  "scikit-learn==1.9.1",
+  "pillow==12.3.0",
+  "opencv-python==5.0.0.93",
+  "torch==2.14.0",
+  # transformers 5.x changed get_image_features/get_text_features to return a
+  # BaseModelOutputWithPooling instead of a tensor. src/srb/models/registry.py
+  # handles both, but do not unpin this without re-running scripts/smoke_clip.py.
+  "transformers==5.17.0",
+  "pyyaml==6.0.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1"]
+
+[project.urls]
+Repository = "https://github.com/ArnavSawhney/surg-retrieval-bench"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/srb"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["error::RuntimeWarning"]

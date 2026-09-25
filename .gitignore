@@ -1,0 +1,27 @@
+# --- Private planning notes: NEVER commit. Not part of the public benchmark. ---
+bet1_plan.md
+CLAUDE_CODE_START.md
+
+# --- Data & large artefacts (licence: CC BY-NC-SA, do not redistribute frames/videos/embeddings) ---
+data/
+*.zip
+*.mp4
+*.npy
+*.parquet
+embeddings/
+checkpoints/
+
+# --- Secrets ---
+.env
+.env.*
+*.token
+
+# --- Python / tooling ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+.DS_Store
