@@ -35,6 +35,11 @@ Recorded, deliberately **not** implemented yet.
    test videos 41–80 (and CholecT50 overlaps Cholec80 by construction). Audit each
    backbone's pretraining corpus and write it up in `docs/datasets.md` before
    interpreting any zero-shot win.
+   *Half closed 2026-09-26:* dataset-level overlap is mapped and enforced
+   (`src/srb/datasets/overlap.py`, CAMMA `camma_dataset_overlaps` @ `8347b9f`).
+   Still open: per-backbone pretraining corpora (every row in `docs/datasets.md` is
+   currently "unverified"), CholecSeg8k, Cholec80-CVS, CholecT45.
+
 3. **Label frame-rate alignment.** Phases are annotated at 25 fps, tools at 1 fps.
    Needs an explicit frame-index alignment test in the manifest-integrity suite before
    any result is computed.
