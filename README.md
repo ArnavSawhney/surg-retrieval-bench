@@ -12,8 +12,8 @@ PeskaVLP) on public data, with a fixed test split and pre-registered predictions
 > **Status: no results yet.** This repo is at Session 1 (scaffolding, metrics,
 > and the CLIP wrapper). No model has been evaluated on a test split. Every number
 > that eventually appears in `results/` will be produced by a script in this repo,
-> and no number is reported here until it has actually been run. See `LOG.md` for
-> the running record.
+> and no number is reported here until it has actually been run. See `PROGRESS.md` for
+> the current state and `LOG.md` for the running record.
 
 ## Research questions
 

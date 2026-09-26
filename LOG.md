@@ -1,7 +1,8 @@
 # Log
 
 One line per session: date, what was done, what's next. Plus running lists of open
-decisions and parked ideas.
+decisions and parked ideas. `PROGRESS.md` holds the detailed current state (environment
+facts, what is verified, what is next); this file is the chronological record.
 
 ## Sessions
 
