@@ -72,22 +72,58 @@ results.
 
 ## Conventions
 
-### Ties
+### Ties: every metric is a tie-neutral expectation
 
-Frames are ranked by `np.argsort(-scores, kind="stable")`: **descending score, ties
-broken by ascending frame index.** This is deterministic — the same scores always give
-the same ranking, so a run is bit-reproducible.
+*(Changed 26 Sep 2026; closes open decision #5 in `LOG.md`.)*
 
-⚠️ **It is deterministic but not tie-neutral.** With four equal scores and relevance
-`[1,1,0,0]` the AP is 1.0; with the same scores and relevance `[0,0,1,1]` it is 5/12.
-If a model ever produced large blocks of exactly-equal similarities, frame index
-(which tracks video order) would leak into the score. `sklearn`'s
-`average_precision_score` instead groups tied scores at one threshold, which averages
-over the tie — this is why `average_precision` only agrees with sklearn on tie-free
-scores, which is asserted in the tests, along with the divergence itself. Whether to
-switch to the tie-neutral convention is an **open decision** in `LOG.md`; cosine
-similarities between float32 embeddings tie only rarely, and the check for that
-belongs in the evaluation script.
+Frames with exactly equal scores form a **tied group**. Every metric returns its
+**expected value under a uniformly random ordering within each tied group**
+(McSherry & Najork, ECIR 2008). Groups are processed in descending score order. For a
+group of `g` frames, `r` of them relevant, preceded by `n_b` frames of which `r_b` are
+relevant:
+
+* **AP.** The group contributes
+  `Σ_{j=1..g} (r/g) · (r_b + 1 + (j−1)(r−1)/(g−1)) / (n_b + j)`, with
+  `(r−1)/(g−1) := 0` when `g = 1`; the total is divided by `R`. This is exact by
+  linearity of expectation: `r/g` is the probability that slot `j` holds a relevant
+  frame, and given that, the expected number of relevant frames in slots `1..j` is
+  `r_b + 1 + (j−1)(r−1)/(g−1)`.
+* **P@k and R-Precision.** A group straddling the cutoff with `t` of its `g` slots
+  inside the top `k` contributes `t · r / g` relevant frames.
+* **Hit@k.** If no relevant frame ranks above the straddling group,
+  `P(hit) = 1 − C(g−r, t) / C(g, t)`.
+
+Example: four equal scores with relevance `[1,1,0,0]` give AP = **49/72** ≈ 0.681, and
+so does `[0,0,1,1]`. Under the Session 1 convention (stable sort, ties broken by
+ascending frame index) the same inputs gave 1.0 and 5/12, so frame index — which tracks
+video order — leaked into the score. The tests check every metric against brute-force
+enumeration of all within-group orderings in exact rational arithmetic, check that
+shuffling frame indices changes nothing, and check that tie-free scores give the plain
+sorted definition (and sklearn's AP, to 1e-12).
+
+**Why ties are not rare here.** Embeddings are stored in fp16. In a simulation
+(98,520 random unit vectors, 1152-d, stored in fp16, one random unit query), computing
+the similarities *in fp16* left 95,257 frames (96.7%) in 11,331 tied groups; computing
+them in float32 after upcasting left 156 tied frames (0.16%). Real data adds true
+duplicates (black and out-of-body frames). So:
+
+* every metric **raises on a float16 score array**; similarities are computed in
+  float32 or higher after upcasting the stored embeddings;
+* metrics cast scores to float64 before grouping;
+* `count_ties(scores) -> (n_tied_frames, n_groups)` is reported per query in every
+  retrieval output.
+
+**Why not sklearn's convention.** `sklearn.metrics.average_precision_score` is also
+order-invariant, but it interpolates at score thresholds: every relevant frame in a
+tied group gets the precision at the *end* of the group. For `[1,1,0,0]` all tied that
+is 0.5, not the expectation 49/72. The divergence is asserted in the tests.
+
+`rank_order` still returns a deterministic stable-sort ranking for *display*; no metric
+depends on its tie-break.
+
+A document-name tie rule has been shown to bias TREC results (Cabanac, Hubert,
+Boughanem and Chrisment, "Tie-breaking bias", CLEF 2010), which is why the index tie-break was dropped rather than kept for
+reproducibility: the expectation is just as reproducible.
 
 ### Undefined values
 
@@ -117,3 +153,9 @@ it would hide that. Graded (non 0/1) relevance raises, because relevance here is
   (metric choice in this specific domain).
 * Twinanda et al., *EndoNet*, IEEE TMI 2017 (Cholec80; the mean phase durations used
   for the prevalence figures above).
+* McSherry and Najork, *Computing information retrieval performance measures
+  efficiently in the presence of tied scores*, ECIR 2008, pp. 414–421 (the
+  tie-neutral formulas).
+* Cabanac, Hubert, Boughanem and Chrisment, *Tie-breaking bias: effect of an
+  uncontrolled parameter on information retrieval evaluation*, CLEF 2010, LNCS 6360,
+  pp. 112–123 (tie-breaking by document name biases TREC scores).

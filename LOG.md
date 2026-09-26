@@ -40,15 +40,12 @@ Recorded, deliberately **not** implemented yet.
    any result is computed.
 4. **Week 2 is overloaded** (4 models + full extraction + pre-registration).
    **Pre-registration has priority**; model count is the thing that gets cut.
-5. **Tie-breaking convention in the ranking** *(found while writing `metrics.py`)*.
-   Ties are currently broken by ascending frame index — deterministic and
-   reproducible, but not tie-neutral: with equal scores, AP depends on where the
-   relevant frames sit in the index, which tracks video order. sklearn's
-   `average_precision_score` instead averages over tied groups (the divergence is
-   asserted in `tests/test_metrics.py`). Float32 cosine similarities tie rarely, so
-   the cheap first step is for `eval_retrieval.py` to **count exact ties** and report
-   them; switch conventions only if the count is non-trivial. Decide before
-   pre-registration.
+5. ~~**Tie-breaking convention in the ranking.**~~ **Closed 2026-09-26.** Every metric
+   is now the expected value under a uniformly random order within each tied group
+   (McSherry & Najork, ECIR 2008); float16 score arrays raise; `count_ties` is reported
+   per query. The index tie-break was not tie-neutral, and ties are not rare: in a
+   simulation, fp16-computed similarities left 96.7% of 98.5k frames tied. Details in
+   `docs/metrics.md` ("Ties").
 
 ## Parked
 

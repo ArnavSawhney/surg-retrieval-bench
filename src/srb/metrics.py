@@ -1,6 +1,6 @@
 """Retrieval metrics for text-to-frame search on surgical video.
 
-Pure NumPy. No torch, no model code, no I/O.
+Pure NumPy (plus ``fractions`` for the exact mode). No torch, no model code, no I/O.
 
 Why this metric set
 -------------------
@@ -23,13 +23,43 @@ models; ``hit_at_k`` is kept for debugging. See ``docs/metrics.md`` and
 
 Conventions (all functions)
 ---------------------------
-Ranking / ties
-    Frames are ranked by ``np.argsort(-scores, kind="stable")``: descending score,
-    and **ties broken by ascending frame index**. This is deterministic and
-    reproducible, but it is not tie-neutral -- see the warning under `Ties` in
-    ``docs/metrics.md``. It is also why ``average_precision`` only agrees with
-    ``sklearn.metrics.average_precision_score`` when the scores contain no ties
-    (sklearn groups tied scores at a single threshold, which averages over them).
+Ties: tie-neutral expected values
+    Frames with exactly equal scores form a *tied group*. Every metric returns its
+    **expected value under a uniformly random ordering within each tied group**
+    (McSherry & Najork, "Computing information retrieval performance measures
+    efficiently in the presence of tied scores", ECIR 2008). Groups are processed
+    in descending score order. For a group of ``g`` frames, ``r`` of them relevant,
+    preceded by ``n_b`` frames of which ``r_b`` are relevant:
+
+    * AP: the group contributes
+      ``sum_{j=1..g} (r/g) * (r_b + 1 + (j-1)(r-1)/(g-1)) / (n_b + j)``
+      (with ``(r-1)/(g-1) := 0`` when ``g == 1``); the total is divided by ``R``.
+      Exact by linearity of expectation: ``r/g`` is the chance that slot ``j`` holds
+      a relevant frame, and given that, the expected number of relevant frames in
+      slots ``1..j`` is ``r_b + 1 + (j-1)(r-1)/(g-1)``.
+    * P@k and R-Precision: a group straddling the cutoff with ``t`` of its ``g``
+      slots inside the top ``k`` contributes ``t * r / g`` relevant frames.
+    * Hit@k: if no relevant frame precedes the straddling group,
+      ``P(hit) = 1 - C(g - r, t) / C(g, t)``.
+
+    Why: ties are *not* rare here. Embeddings are stored in fp16, real data has true
+    duplicates (black and out-of-body frames), and a frame-index tie-break would let
+    video order leak into the score. On tie-free scores every metric equals the plain
+    (sorted) definition, and AP equals ``sklearn.metrics.average_precision_score``.
+    With ties, sklearn differs: it assigns every frame in a tied group the precision
+    at the end of the group, which is not the expectation.
+
+    Every metric takes ``exact=True``, which runs the same formulas in
+    ``fractions.Fraction`` arithmetic and returns a ``Fraction``. That mode is slow
+    and exists so the tests can compare against brute-force enumeration with exact
+    equality.
+
+Score precision
+    Scores are cast to float64 before grouping. A **float16 score array raises**:
+    fp16 has so few distinct values near a cosine similarity of ~0.2-0.3 that most
+    frames would tie (a 98.5k x 1152-d fp16 simulation gave 3,818 distinct scores for
+    98.5k frames). Compute similarities in float32 or higher, *after* upcasting the
+    stored fp16 embeddings. Use ``count_ties`` to report how many ties remain.
 
 Undefined values
     A query with **zero** relevant frames has no defined AP or R-Precision. These
@@ -42,18 +72,21 @@ Negative / control queries
     (a later week). Do not feed them to ``mean_ap``.
 
 Inputs
-    ``scores``: 1-D, finite, float-castable, one score per frame (higher = more
-    similar). ``relevant``: 1-D, same length, boolean or 0/1 ground truth.
+    ``scores``: 1-D, finite, float-castable (not float16), one score per frame (higher
+    = more similar). ``relevant``: 1-D, same length, boolean or 0/1 ground truth.
 """
 
 from __future__ import annotations
 
+import math
 import warnings
+from fractions import Fraction
 
 import numpy as np
 
 __all__ = [
     "rank_order",
+    "count_ties",
     "average_precision",
     "r_precision",
     "precision_at_k",
@@ -66,13 +99,27 @@ __all__ = [
 # --------------------------------------------------------------------------- #
 # validation helpers
 # --------------------------------------------------------------------------- #
-def _check(scores, relevant) -> tuple[np.ndarray, np.ndarray]:
-    """Validate and normalise (scores, relevant) -> (float64 scores, bool relevant)."""
-    scores = np.asarray(scores, dtype=np.float64)
-    relevant = np.asarray(relevant)
-
+def _as_scores(scores) -> np.ndarray:
+    """Validate scores -> 1-D finite float64. Refuses float16 (see module docstring)."""
+    raw = np.asarray(scores)
+    if raw.dtype == np.float16:
+        raise TypeError(
+            "scores are float16: fp16 similarities tie massively and would distort "
+            "every metric. Upcast the embeddings and compute scores in float32 or higher."
+        )
+    scores = raw.astype(np.float64)
     if scores.ndim != 1:
         raise ValueError(f"scores must be 1-D, got shape {scores.shape}")
+    if not np.all(np.isfinite(scores)):
+        raise ValueError("scores contains nan or inf; fix the encoder, do not rank nans")
+    return scores
+
+
+def _check(scores, relevant) -> tuple[np.ndarray, np.ndarray]:
+    """Validate and normalise (scores, relevant) -> (float64 scores, bool relevant)."""
+    scores = _as_scores(scores)
+    relevant = np.asarray(relevant)
+
     if relevant.ndim != 1:
         raise ValueError(f"relevant must be 1-D, got shape {relevant.shape}")
     if scores.shape != relevant.shape:
@@ -82,8 +129,6 @@ def _check(scores, relevant) -> tuple[np.ndarray, np.ndarray]:
         )
     if scores.size == 0:
         raise ValueError("scores is empty: nothing to rank")
-    if not np.all(np.isfinite(scores)):
-        raise ValueError("scores contains nan or inf; fix the encoder, do not rank nans")
 
     if relevant.dtype == bool:
         rel = relevant
@@ -114,107 +159,183 @@ def _check_k(k: int, n: int) -> int:
     return k
 
 
+def _warn_undefined(name: str) -> float:
+    warnings.warn(
+        f"{name} is undefined for a query with 0 relevant frames; returning nan. "
+        "Negative/control queries belong in the calibration check, not in mAP.",
+        RuntimeWarning,
+        stacklevel=3,
+    )
+    return float("nan")
+
+
 # --------------------------------------------------------------------------- #
-# ranking
+# ranking and tied groups
 # --------------------------------------------------------------------------- #
 def rank_order(scores) -> np.ndarray:
-    """Indices of ``scores`` from most to least similar.
+    """Indices of ``scores`` from most to least similar, for *display* only.
 
-    Descending score; ties broken by **ascending frame index** via a stable sort.
-    Deterministic: the same scores always give the same ranking.
+    Descending score; ties broken by ascending frame index via a stable sort, so the
+    same scores always give the same list. **No metric depends on this tie-break**:
+    the metrics are expectations over the order within each tied group.
     """
-    scores = np.asarray(scores, dtype=np.float64)
-    if scores.ndim != 1:
-        raise ValueError(f"scores must be 1-D, got shape {scores.shape}")
-    if not np.all(np.isfinite(scores)):
-        raise ValueError("scores contains nan or inf; fix the encoder, do not rank nans")
+    scores = _as_scores(scores)
     return np.argsort(-scores, kind="stable")
 
 
-def _ranked_relevance(scores, relevant) -> np.ndarray:
-    """Boolean relevance of each frame, in ranked order."""
-    scores, rel = _check(scores, relevant)
-    return rel[np.argsort(-scores, kind="stable")]
+def _groups(scores: np.ndarray, rel: np.ndarray):
+    """Tied groups in descending score order.
+
+    Returns int64 arrays ``(g, r, n_b, r_b)``: group size, relevant frames in the
+    group, frames before the group, relevant frames before the group.
+    """
+    order = np.argsort(-scores, kind="stable")
+    s = scores[order]
+    starts = np.flatnonzero(np.r_[True, s[1:] != s[:-1]])
+    g = np.diff(np.r_[starts, s.size])
+    r = np.add.reduceat(rel[order].astype(np.int64), starts)
+    n_b = starts.astype(np.int64)
+    r_b = np.cumsum(r) - r
+    return g, r, n_b, r_b
+
+
+def count_ties(scores) -> tuple[int, int]:
+    """``(n_tied_frames, n_groups)``: frames that share their score with at least one
+    other frame, and the number of such tied groups (groups of size >= 2).
+
+    ``(0, 0)`` means the scores are tie-free. Report this per query in every
+    retrieval output.
+    """
+    scores = _as_scores(scores)
+    _, counts = np.unique(scores, return_counts=True)
+    tied = counts[counts > 1]
+    return int(tied.sum()), int(tied.size)
+
+
+def _cutoff(g, r, n_b, k: int):
+    """Relevant frames fully above cutoff ``k``, plus the straddling group (or None).
+
+    Returns ``(r_full, straddle)`` where ``straddle = (t, g_i, r_i)`` with ``t`` the
+    straddling group's slots inside the top ``k`` (0 < t < g_i), or ``None`` when the
+    cutoff falls exactly on a group boundary.
+    """
+    ends = n_b + g
+    i = int(np.searchsorted(ends, k, side="left"))  # first group ending at or after k
+    if ends[i] == k:
+        return int(r[: i + 1].sum()), None
+    return int(r[:i].sum()), (int(k - n_b[i]), int(g[i]), int(r[i]))
 
 
 # --------------------------------------------------------------------------- #
 # primary metric
 # --------------------------------------------------------------------------- #
-def average_precision(scores, relevant) -> float:
-    """Full-ranking average precision for one query.
+def average_precision(scores, relevant, *, exact: bool = False):
+    """Full-ranking average precision for one query, tie-neutral.
 
-    ``AP = (1 / R) * sum over relevant ranks i of P@i``, where ``R`` is the total
-    number of relevant frames and ``P@i`` is the precision in the top ``i``. Every
-    relevant frame contributes, so AP is not capped by a cutoff and cannot be
-    saturated by getting one clip right.
+    ``AP = (1 / R) * sum over relevant ranks i of P@i``. With ties, this is the
+    expected AP over uniformly random orderings within each tied group (formula in
+    the module docstring). Every relevant frame contributes, so AP is not capped by
+    a cutoff and cannot be saturated by getting one clip right.
 
-    Returns ``nan`` (with a ``RuntimeWarning``) if ``R == 0``.
+    Returns ``nan`` (with a ``RuntimeWarning``) if ``R == 0``. ``exact=True``
+    returns a ``Fraction``.
     """
-    r = _ranked_relevance(scores, relevant)
-    R = int(r.sum())
+    scores, rel = _check(scores, relevant)
+    R = int(rel.sum())
     if R == 0:
-        warnings.warn(
-            "average_precision is undefined for a query with 0 relevant frames; "
-            "returning nan. Negative/control queries belong in the calibration "
-            "check, not in mAP.",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-        return float("nan")
+        return _warn_undefined("average_precision")
+    g, r, n_b, r_b = _groups(scores, rel)
 
-    hit_positions = np.flatnonzero(r)                  # 0-based ranks of relevant frames
-    hits_so_far = np.arange(1, R + 1)                  # 1st, 2nd, ... relevant frame
-    precision_at_hits = hits_so_far / (hit_positions + 1)
-    return float(precision_at_hits.mean())
+    if exact:
+        total = Fraction(0)
+        for gi, ri, nbi, rbi in zip(g.tolist(), r.tolist(), n_b.tolist(), r_b.tolist()):
+            if ri == 0:
+                continue
+            c = Fraction(ri - 1, gi - 1) if gi > 1 else Fraction(0)
+            p_rel = Fraction(ri, gi)
+            total += sum(p_rel * (rbi + 1 + (j - 1) * c) / (nbi + j) for j in range(1, gi + 1))
+        return total / R
+
+    # Vectorised over frames: expand the group statistics to one entry per slot.
+    keep = r > 0
+    g, r, n_b, r_b = g[keep], r[keep], n_b[keep], r_b[keep]
+    c = np.where(g > 1, (r - 1) / np.maximum(g - 1, 1), 0.0)
+    rep = lambda a: np.repeat(a, g)  # noqa: E731
+    j = np.arange(1, g.sum() + 1) - rep(np.cumsum(g) - g)  # 1..g within each group
+    terms = rep(r / g) * (rep(r_b) + 1 + (j - 1) * rep(c)) / (rep(n_b) + j)
+    return float(terms.sum() / R)
 
 
 # --------------------------------------------------------------------------- #
 # secondary metric
 # --------------------------------------------------------------------------- #
-def r_precision(scores, relevant) -> float:
-    """Precision in the top ``R``, where ``R`` is the number of relevant frames.
+def _expected_hits_at(scores, rel, k: int, exact: bool):
+    g, r, n_b, _ = _groups(scores, rel)
+    r_full, straddle = _cutoff(g, r, n_b, k)
+    if straddle is None:
+        return Fraction(r_full) if exact else float(r_full)
+    t, gi, ri = straddle
+    return r_full + (Fraction(t * ri, gi) if exact else t * ri / gi)
+
+
+def r_precision(scores, relevant, *, exact: bool = False):
+    """Expected precision in the top ``R``, where ``R`` is the number of relevant frames.
 
     Self-normalising: a perfect ranker scores 1.0 whatever R is, and a random
-    ranker scores about the prevalence. Returns ``nan`` (with a
-    ``RuntimeWarning``) if ``R == 0``.
+    ranker scores about the prevalence. Tie-neutral (see module docstring).
+    Returns ``nan`` (with a ``RuntimeWarning``) if ``R == 0``.
     """
-    r = _ranked_relevance(scores, relevant)
-    R = int(r.sum())
+    scores, rel = _check(scores, relevant)
+    R = int(rel.sum())
     if R == 0:
-        warnings.warn(
-            "r_precision is undefined for a query with 0 relevant frames; returning nan.",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-        return float("nan")
-    return float(r[:R].mean())
+        return _warn_undefined("r_precision")
+    hits = _expected_hits_at(scores, rel, R, exact)
+    return hits / R if exact else float(hits / R)
 
 
 # --------------------------------------------------------------------------- #
 # descriptive / debugging
 # --------------------------------------------------------------------------- #
-def precision_at_k(scores, relevant, k: int) -> float:
-    """Fraction of the top ``k`` frames that are relevant ("what a user sees first").
+def precision_at_k(scores, relevant, k: int, *, exact: bool = False):
+    """Expected fraction of the top ``k`` frames that are relevant.
 
     **Descriptive only.** With thousands of relevant frames per query this
     saturates at 1.0 for weak and strong models alike, so never rank models by it.
-    ``k`` is clamped to ``N`` with a warning if ``k > N``.
+    ``k`` is clamped to ``N`` with a warning if ``k > N``. Tie-neutral.
     """
-    r = _ranked_relevance(scores, relevant)
-    k = _check_k(k, r.size)
-    return float(r[:k].mean())
+    scores, rel = _check(scores, relevant)
+    k = _check_k(k, rel.size)
+    hits = _expected_hits_at(scores, rel, k, exact)
+    return hits / k if exact else float(hits / k)
 
 
-def hit_at_k(scores, relevant, k: int) -> float:
-    """1.0 if at least one relevant frame is in the top ``k``, else 0.0.
+def hit_at_k(scores, relevant, k: int, *, exact: bool = False):
+    """Probability that at least one relevant frame is in the top ``k``.
+
+    Without ties this is 1.0 or 0.0. If the cutoff splits a tied group with ``t`` of
+    its ``g`` slots inside the top ``k`` and no relevant frame ranks above that
+    group, it is ``1 - C(g - r, t) / C(g, t)``.
 
     **Sanity check only.** A random ranker gets ~0.99 on the long Cholec80 phases,
-    so it cannot discriminate between models. Kept for debugging a ranking that
-    looks broken.
+    so it cannot discriminate between models.
     """
-    r = _ranked_relevance(scores, relevant)
-    k = _check_k(k, r.size)
-    return float(r[:k].any())
+    scores, rel = _check(scores, relevant)
+    k = _check_k(k, rel.size)
+    g, r, n_b, _ = _groups(scores, rel)
+    r_full, straddle = _cutoff(g, r, n_b, k)
+    one = Fraction(1) if exact else 1.0
+    if r_full > 0:
+        return one
+    if straddle is None:
+        return 0 * one
+    t, gi, ri = straddle
+    if t > gi - ri:  # more slots than irrelevant frames: a hit is certain
+        return one
+    if exact:
+        return 1 - Fraction(math.comb(gi - ri, t), math.comb(gi, t))
+    # C(g-r, t) / C(g, t) = prod_{i<t} (g-r-i) / (g-i), summed in log space
+    i = np.arange(t)
+    return float(-np.expm1(np.log((gi - ri - i) / (gi - i)).sum()))
 
 
 # --------------------------------------------------------------------------- #
