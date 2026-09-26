@@ -164,6 +164,7 @@ class HFDualEncoderSpec:
     revision: str  # pinned commit hash: an upstream re-upload must not move our numbers
     default_batch_size: int = 32
     text_padding: str | bool = True  # SigLIP needs "max_length"
+    text_max_length: int | None = None  # SigLIP: 64, the length it was trained with
     gated: bool = False  # needs HF_TOKEN (e.g. MedSigLIP HAI-DEF terms)
     notes: str = ""
     processor_kwargs: dict = field(default_factory=dict)
@@ -193,7 +194,7 @@ class HFDualEncoder(Backbone):
             .to(self.device)
             .eval()
         )
-        self.embed_dim = int(self.model.config.projection_dim)
+        self.embed_dim = _embed_dim(self.model.config)
 
     def _encode_image_batch(self, images: list[Image.Image]) -> torch.Tensor:
         # Always convert to RGB: some extracted frames may carry an alpha channel.
@@ -203,11 +204,22 @@ class HFDualEncoder(Backbone):
         return _projected_features(self.model.get_image_features(**batch))
 
     def _encode_text_batch(self, texts: list[str]) -> torch.Tensor:
+        length = {"max_length": self.spec.text_max_length} if self.spec.text_max_length else {}
         batch = self.processor(
-            text=texts, padding=self.spec.text_padding, truncation=True, return_tensors="pt"
+            text=texts, padding=self.spec.text_padding, truncation=True, return_tensors="pt",
+            **length,
         )
         batch = {k: v.to(self.device) for k, v in batch.items()}
         return _projected_features(self.model.get_text_features(**batch))
+
+
+def _embed_dim(config) -> int:
+    """Output dimension: CLIP has ``projection_dim``; SigLIP has no projection layer
+    config, and its pooled embedding has the vision tower's ``hidden_size``."""
+    dim = getattr(config, "projection_dim", None)
+    if dim is None:
+        dim = config.vision_config.hidden_size
+    return int(dim)
 
 
 def _projected_features(out) -> torch.Tensor:
@@ -247,8 +259,8 @@ def _hf_token(*, required: bool, model: str) -> str | None:
 # --------------------------------------------------------------------------- #
 # the registry
 # --------------------------------------------------------------------------- #
-# Session 1 deliberately ships CLIP only. The commented rows are the Week 2 targets,
-# left here so the shape of a new entry is obvious; they are NOT available yet.
+# Week 1: CLIP and SigLIP. The commented MedSigLIP row is a Week 2 target, left here
+# so the shape of a gated entry is obvious; it is NOT available yet.
 _SPECS: dict[str, HFDualEncoderSpec] = {
     "clip-vit-l14": HFDualEncoderSpec(
         hf_id="openai/clip-vit-large-patch14",
@@ -256,9 +268,22 @@ _SPECS: dict[str, HFDualEncoderSpec] = {
         default_batch_size=32,
         notes="General-purpose baseline (Radford et al., 2021). 224 px, projection_dim 768.",
     ),
-    # "siglip-so400m-384": HFDualEncoderSpec(
-    #     hf_id="google/siglip-so400m-patch14-384", revision="...",
-    #     text_padding="max_length", notes="Strong general baseline (Zhai et al., 2023)."),
+    # SigLIP was trained with text padded to exactly 64 tokens. With default
+    # (longest) padding the pooled text embedding shifts and quality silently drops,
+    # so padding="max_length" + max_length=64 is required, not cosmetic.
+    #
+    # Ranking by cosine similarity is correct for SigLIP: its sigmoid logit is
+    # ``t * cos + b`` with a learned scale t > 0 and bias b that are per-model
+    # constants, so the logit (and the sigmoid of it) is a monotone function of the
+    # cosine and gives the identical ranking for a query.
+    "siglip-so400m-384": HFDualEncoderSpec(
+        hf_id="google/siglip-so400m-patch14-384",
+        revision="9fdffc58afc957d1a03a25b10dba0329ab15c2a3",
+        default_batch_size=16,
+        text_padding="max_length",
+        text_max_length=64,
+        notes="Strong general baseline (Zhai et al., 2023). 384 px, embedding dim 1152.",
+    ),
     # "medsiglip-448": HFDualEncoderSpec(
     #     hf_id="google/medsiglip-448", revision="...", text_padding="max_length",
     #     gated=True, notes="Accept the HAI-DEF terms on HF first. projection_dim 1152."),

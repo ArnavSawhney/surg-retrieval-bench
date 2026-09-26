@@ -27,6 +27,9 @@ dependencies = [
   # handles both, but do not unpin this without re-running scripts/smoke_clip.py.
   "transformers==5.17.0",
   "pyyaml==6.0.3",
+  # SigLIP's tokenizer is SentencePiece-based and needs protobuf to load.
+  "sentencepiece==0.2.2",
+  "protobuf==7.36.2",
 ]
 
 [project.optional-dependencies]

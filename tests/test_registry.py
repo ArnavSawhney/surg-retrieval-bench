@@ -27,22 +27,60 @@ from srb.models.registry import (
 # --------------------------------------------------------------------------- #
 
 
-def test_session1_ships_clip_only():
-    """Session 1 is CLIP only. SigLIP / MedSigLIP / PeskaVLP land in Week 2."""
-    assert list_backbones() == ["clip-vit-l14"]
+def test_week1_ships_clip_and_siglip_only():
+    """Week 1: CLIP + SigLIP. MedSigLIP / PeskaVLP land in Week 2."""
+    assert list_backbones() == ["clip-vit-l14", "siglip-so400m-384"]
 
 
 def test_unknown_backbone_raises_with_the_available_names():
     with pytest.raises(KeyError, match="clip-vit-l14"):
-        get_backbone("siglip-so400m-384")
+        get_backbone("medsiglip-448")
 
 
-def test_clip_revision_is_pinned_to_a_commit_hash():
+@pytest.mark.parametrize("name", ["clip-vit-l14", "siglip-so400m-384"])
+def test_revision_is_pinned_to_a_commit_hash(name):
     """A floating 'main' revision would let an upstream re-upload change our numbers."""
     from srb.models.registry import _SPECS
 
-    rev = _SPECS["clip-vit-l14"].revision
+    rev = _SPECS[name].revision
     assert len(rev) == 40 and all(c in "0123456789abcdef" for c in rev)
+
+
+def test_siglip_text_is_padded_to_max_length_64():
+    """SigLIP must call its processor with padding="max_length", max_length=64.
+
+    Checked on the real call path with a fake processor/model, so no weights needed.
+    """
+    from types import SimpleNamespace
+
+    from srb.models.registry import _SPECS, HFDualEncoder
+
+    calls = []
+
+    def fake_processor(**kwargs):
+        calls.append(kwargs)
+        return {"input_ids": torch.zeros(len(kwargs["text"]), 64, dtype=torch.long)}
+
+    fake_model = SimpleNamespace(get_text_features=lambda **kw: torch.ones(
+        kw["input_ids"].shape[0], 4))
+    enc = HFDualEncoder.__new__(HFDualEncoder)
+    enc.spec, enc.processor, enc.model = _SPECS["siglip-so400m-384"], fake_processor, fake_model
+    enc.device, enc.dtype = torch.device("cpu"), torch.float32
+
+    enc._encode_text_batch(["a", "b"])
+    assert calls[0]["padding"] == "max_length"
+    assert calls[0]["max_length"] == 64
+    assert calls[0]["truncation"] is True
+
+
+def test_embed_dim_falls_back_to_vision_hidden_size():
+    """SigLIP's config has no projection_dim; its embedding is vision hidden_size."""
+    from types import SimpleNamespace
+
+    from srb.models.registry import _embed_dim
+
+    assert _embed_dim(SimpleNamespace(projection_dim=768)) == 768
+    assert _embed_dim(SimpleNamespace(vision_config=SimpleNamespace(hidden_size=1152))) == 1152
 
 
 # --------------------------------------------------------------------------- #
