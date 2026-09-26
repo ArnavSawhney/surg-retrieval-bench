@@ -10,7 +10,7 @@ traps already hit.
 No result produced.** `results/` is empty and must stay empty until
 `docs/preregistration.md` is written.
 
-Start a new session by reading the local gitignored planning notes (see `.gitignore`)
+Start a new session by reading the local, git-excluded planning notes (see `.git/info/exclude`)
 — they are the source of truth for scope and hard rules, and they are private: never
 commit them or copy their content into a tracked file.
 
