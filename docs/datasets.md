@@ -41,7 +41,11 @@ for the archive plus its extracted contents, and resumes an interrupted transfer
 
 ### Protocol used in this benchmark
 
-* Sample frames at **1 fps**, resize the short side to 448 px, JPEG quality 90.
+* Sample frames at **1 fps by frame index, not timestamp**: keep 25 fps frame indices
+  0, 25, 50, … (the video must be exactly 25 fps, or extraction refuses). These are
+  precisely the frames the 1 fps tool labels refer to, and each has a 25 fps phase
+  label. Resize the short side to 448 px (bicubic), JPEG quality 90 (written by
+  Pillow; ffmpeg decodes, selects by decoded frame number and scales).
 * **Videos 1–32: train. Videos 33–40: validation. Videos 41–80: test.**
 * Nothing is tuned on 41–80 — not a prompt, not a smoothing window, not a threshold.
 * Retrieval relevance: a frame is relevant to a query if its ground-truth phase or
@@ -49,11 +53,27 @@ for the archive plus its extracted contents, and resumes an interrupted transfer
 * Approximate test-split size at 1 fps: ~98,500 frames (from EndoNet mean phase
   durations × 40 videos). Replace with the real count once the annotations are parsed.
 
-### Note on label frame rates
+### Label frame rates and alignment
 
-Phases are annotated at 25 fps and tools at 1 fps, so the two label sources index
-frames differently. A frame-index alignment test belongs in the manifest-integrity
-suite before any result is produced — open item in `LOG.md`.
+Phase files have one row per 25 fps frame (0-based, contiguous); tool files have one
+row per second at frame indices 0, 25, 50, …. Labels are joined on the **frame
+index**. Checked on videos 1–5: every tool index exists in the phase labels, and in
+every video the last phase frame is itself a multiple of 25 while the tool file stops
+one sample earlier (video01: phase frames 0–43325, tools 0–43300). That one trailing
+sample per video has a phase but no tool vector; it is **dropped explicitly and
+counted** in the extraction stats. Any other gap raises. Code:
+`src/srb/datasets/cholec80.py`; tests: `tests/test_cholec80.py`,
+`tests/test_manifest.py`.
+
+### Getting the videos without the full archive
+
+The Cholec80 zip is 74,916,858,781 bytes (69.8 GiB). `scripts/check_zip_integrity.py`
+checks its size and listing (80 videos, 80 phase and 80 tool files), reading only the
+central directory. `scripts/fetch_cholec80_videos.py` fetches individual videos from
+the archive — a local copy or the official URL, via HTTP range requests —
+verifying each against the CRC-32 in the zip. The archive location comes from
+`SRB_CHOLEC80_ZIP` or the gitignored `configs/local.yaml`. Test videos (41–80) are
+refused until the pre-registration is committed.
 
 ## Endoscapes2023
 
@@ -76,9 +96,13 @@ queries. 22 of its videos are Cholec80 test videos (see Contamination, below).
 
 ## Storage and where to run downloads
 
-At 1 fps and 448 px JPEG, ~80 videos of roughly 38 minutes give ~180k frames,
-estimated at 5–10 GB (measure on 5 videos before trusting that). Embeddings are
-small: 180k × 1152 in float16 is about 0.4 GB per model.
+Measured on videos 1–5 (Sep 2026): 14,266 frames at 1 fps, 448 px short side, JPEG q90
+take **1.11 GB, 77.6 KB per frame**, and extraction ran at 24 ms per frame (342 s in
+total on an M1 with ffmpeg 8.1). The five source videos are 7.33 GB. Extrapolating
+per frame (not per video: these five average 47.6 min, longer than the ~38 min
+Cholec80 mean), ~182k frames for all 80 videos come to **~14 GB and ~73 min of
+extraction**; the 40 test videos (~98.5k frames) to ~7.6 GB. Embeddings are small:
+182k × 1152 in float16 is about 0.4 GB per model.
 
 The raw archives are far larger than the frames, and are **not** meant for a laptop.
 Run the full download and frame extraction on a machine with disk to spare

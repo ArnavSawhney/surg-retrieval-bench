@@ -40,9 +40,13 @@ Recorded, deliberately **not** implemented yet.
    Still open: per-backbone pretraining corpora (every row in `docs/datasets.md` is
    currently "unverified"), CholecSeg8k, Cholec80-CVS, CholecT45.
 
-3. **Label frame-rate alignment.** Phases are annotated at 25 fps, tools at 1 fps.
-   Needs an explicit frame-index alignment test in the manifest-integrity suite before
-   any result is computed.
+3. ~~**Label frame-rate alignment.**~~ **Closed 2026-09-27.** Labels are joined on the
+   25 fps frame index; frames are selected by index (0, 25, 50, …), not timestamp. On
+   videos 1–5 every tool index is in the phase labels, each video drops exactly one
+   trailing sample (phase but no tool row, counted), and `video_frames − phase_rows = 0`
+   for all five. `tests/test_cholec80.py` covers the rules; `tests/test_manifest.py`
+   passes 7/7 on the 14,266-row manifest. Details in `docs/datasets.md` ("Label frame
+   rates and alignment").
 4. **Week 2 is overloaded** (4 models + full extraction + pre-registration).
    **Pre-registration has priority**; model count is the thing that gets cut.
 5. ~~**Tie-breaking convention in the ranking.**~~ **Closed 2026-09-26.** Every metric
