@@ -26,7 +26,9 @@ ID conventions
 
 Not covered by CAMMA's analysis, hence **no mapping here and the guard refuses them**:
 CholecSeg8k, Cholec80-CVS, CholecT45 (a subset of CholecT50; which of its videos are
-in our test set has not been checked).
+in our test set has not been checked), and M2CAI16-workflow (its Strasbourg part is
+Cholec80 73 and 77-80 per the Cholec80 README.txt, but the M2CAI-side IDs are not
+given).
 """
 
 from __future__ import annotations

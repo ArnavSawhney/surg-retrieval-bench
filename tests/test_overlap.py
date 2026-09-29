@@ -66,7 +66,7 @@ def test_forbidden_m2cai_and_cholec80():
     assert forbidden_for_training("Cholec80") == set(range(41, 81))
 
 
-@pytest.mark.parametrize("ds", ["cholecseg8k", "cholec80_cvs", "cholect45"])
+@pytest.mark.parametrize("ds", ["cholecseg8k", "cholec80_cvs", "cholect45", "m2cai16_workflow"])
 def test_unverified_datasets_raise(ds):
     """No mapping must never read as "no overlap"."""
     with pytest.raises(KeyError, match="No verified"):

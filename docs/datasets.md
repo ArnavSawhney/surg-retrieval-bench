@@ -100,7 +100,8 @@ accompanies Walimbe, Baby, Srivastav and Padoy, *Adaptation of Multi-modal
 Representation Models for Multi-task Surgical Computer Vision*, MICCAI 2025,
 arXiv 2507.05020. The ID tables were transcribed from their README and cross-checked
 by re-running their `overlap_analysis.py`; the per-video Endoscapes pairing comes
-from their mapping files. Their Cholec80 split (train 1–40, val 41–48, test 49–80)
+from their mapping files. The Cholec80 archive's own `README.txt` independently
+confirms the M2CAI16-tool overlap ("video 61-76, except video 63"). Their Cholec80 split (train 1–40, val 41–48, test 49–80)
 differs from ours (train 1–32, val 33–40, **test 41–80**), so their split labels are
 ignored and every video is re-mapped by ID.
 
@@ -114,6 +115,7 @@ ignored and every video is re-mapped by ID.
 | Endoscapes2023 test | none | CAMMA README |
 | M2CAI16-tool train | M2CAI 1–10 ↔ Cholec80 67–76 (set-level; no per-video pairing published) | CAMMA README |
 | M2CAI16-tool test | M2CAI 11–15 ↔ Cholec80 61, 62, 64, 65, 66 (set-level) | CAMMA README |
+| M2CAI16-workflow (Strasbourg part) | Cholec80 73, 77, 78, 79, 80; M2CAI-side IDs not given, so the guard refuses this dataset | Cholec80 `README.txt` (inside the archive) |
 | CholecSeg8k | built from Cholec80 videos; **unverified** — not covered by CAMMA's analysis | — |
 | Cholec80-CVS | built on Cholec80; **unverified** — not covered by CAMMA's analysis | — |
 
