@@ -22,6 +22,20 @@ for Cholec80 and Endoscapes2023 with a live archive-size disk check. 82 tests pa
 label reader, extract videos 1–5, then add SigLIP to the registry and build a toy
 retrieval index over those 5 videos.
 
+### 2026-09-26 to 09-29 — Week 1: metrics, overlap guard, SigLIP, frames, index
+
+Tie-neutral metrics (`f831818`, closes decision #5); cross-dataset overlap guard
+(`1c92ee9`, `77df245`); SigLIP so400m in the registry (`88d35b1`); Cholec80 frame
+extraction with frame-index label alignment for videos 1–5, 14,266 frames, 1.11 GB
+(`ed2e57c`, closes decision #3); frame-embedding index + dev retrieval eval, with a
+Colab path because SigLIP swaps on the 8 GB Mac (`dd065b1`). CLIP and SigLIP indexes
+for videos 1–5 built on a T4 after a Mac-vs-GPU check (min cosine 1.00000). Dev eval
+on training videos 1–5: every AP within 0.84–1.33× its prevalence, negative control
+excluded and scored lowest. 490 tests pass. **Dev checks only; no result produced.**
+
+**Next (Week 2):** write and commit `docs/preregistration.md` first (decides open
+decision #1, near-duplicate frames); then more backbones as time allows (#4).
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
