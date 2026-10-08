@@ -27,17 +27,27 @@ from srb.models.registry import (
 # --------------------------------------------------------------------------- #
 
 
-def test_week1_ships_clip_and_siglip_only():
-    """Week 1: CLIP + SigLIP. MedSigLIP / PeskaVLP land in Week 2."""
-    assert list_backbones() == ["clip-vit-l14", "siglip-so400m-384"]
+def test_registry_ships_clip_siglip_medsiglip():
+    """PeskaVLP runs in its own environment, not through this registry."""
+    assert list_backbones() == ["clip-vit-l14", "medsiglip-448", "siglip-so400m-384"]
 
 
 def test_unknown_backbone_raises_with_the_available_names():
     with pytest.raises(KeyError, match="clip-vit-l14"):
-        get_backbone("medsiglip-448")
+        get_backbone("peskavlp")
 
 
-@pytest.mark.parametrize("name", ["clip-vit-l14", "siglip-so400m-384"])
+def test_medsiglip_is_gated_and_needs_hf_token(monkeypatch):
+    """Without HF_TOKEN the gated model fails with a clear message, before any download."""
+    from srb.models.registry import _SPECS, _hf_token
+
+    assert _SPECS["medsiglip-448"].gated is True
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    with pytest.raises(RuntimeError, match="export HF_TOKEN"):
+        _hf_token(required=True, model="google/medsiglip-448")
+
+
+@pytest.mark.parametrize("name", ["clip-vit-l14", "siglip-so400m-384", "medsiglip-448"])
 def test_revision_is_pinned_to_a_commit_hash(name):
     """A floating 'main' revision would let an upstream re-upload change our numbers."""
     from srb.models.registry import _SPECS
@@ -46,8 +56,9 @@ def test_revision_is_pinned_to_a_commit_hash(name):
     assert len(rev) == 40 and all(c in "0123456789abcdef" for c in rev)
 
 
-def test_siglip_text_is_padded_to_max_length_64():
-    """SigLIP must call its processor with padding="max_length", max_length=64.
+@pytest.mark.parametrize("name", ["siglip-so400m-384", "medsiglip-448"])
+def test_siglip_text_is_padded_to_max_length_64(name):
+    """SigLIP-family models must call the processor with padding="max_length", max_length=64.
 
     Checked on the real call path with a fake processor/model, so no weights needed.
     """
@@ -64,7 +75,7 @@ def test_siglip_text_is_padded_to_max_length_64():
     fake_model = SimpleNamespace(get_text_features=lambda **kw: torch.ones(
         kw["input_ids"].shape[0], 4))
     enc = HFDualEncoder.__new__(HFDualEncoder)
-    enc.spec, enc.processor, enc.model = _SPECS["siglip-so400m-384"], fake_processor, fake_model
+    enc.spec, enc.processor, enc.model = _SPECS[name], fake_processor, fake_model
     enc.device, enc.dtype = torch.device("cpu"), torch.float32
 
     enc._encode_text_batch(["a", "b"])

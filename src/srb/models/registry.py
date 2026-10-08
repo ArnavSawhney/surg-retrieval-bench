@@ -259,8 +259,8 @@ def _hf_token(*, required: bool, model: str) -> str | None:
 # --------------------------------------------------------------------------- #
 # the registry
 # --------------------------------------------------------------------------- #
-# Week 1: CLIP and SigLIP. The commented MedSigLIP row is a Week 2 target, left here
-# so the shape of a gated entry is obvious; it is NOT available yet.
+# CLIP and SigLIP (Week 1), MedSigLIP (Week 2). PeskaVLP runs in its own environment
+# (see scripts/), not through this registry.
 _SPECS: dict[str, HFDualEncoderSpec] = {
     "clip-vit-l14": HFDualEncoderSpec(
         hf_id="openai/clip-vit-large-patch14",
@@ -284,9 +284,23 @@ _SPECS: dict[str, HFDualEncoderSpec] = {
         text_max_length=64,
         notes="Strong general baseline (Zhai et al., 2023). 384 px, embedding dim 1152.",
     ),
-    # "medsiglip-448": HFDualEncoderSpec(
-    #     hf_id="google/medsiglip-448", revision="...", text_padding="max_length",
-    #     gated=True, notes="Accept the HAI-DEF terms on HF first. projection_dim 1152."),
+    # MedSigLIP is a SigLIP-architecture model (SiglipModel), so the same padding rule
+    # and the same cosine-ranking argument apply. Checked against its own model card and
+    # configs, not copied from SigLIP: 448x448 input (preprocessor_config.json), 64 text
+    # tokens (text_config.max_position_embeddings, tokenizer model_max_length), embedding
+    # dim 1152. The card's example resizes with tf.image.resize (bilinear) to match Big
+    # Vision, but states that the Transformers processor's own resize may be used instead;
+    # we use the processor (bicubic, as configured), as for the other models.
+    "medsiglip-448": HFDualEncoderSpec(
+        hf_id="google/medsiglip-448",
+        revision="9cea28a1a1195f665105faa6e8544c112fd960a4",
+        default_batch_size=8,
+        text_padding="max_length",
+        text_max_length=64,
+        gated=True,
+        notes="Medical SigLIP (Google HAI-DEF). Gated: accept the HAI-DEF terms on HF and "
+              "export HF_TOKEN. 448 px, embedding dim 1152.",
+    ),
 }
 
 

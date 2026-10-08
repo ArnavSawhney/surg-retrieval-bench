@@ -8,6 +8,12 @@
 #   !mkdir -p /content/srb && tar -xf /content/drive/MyDrive/srb/srb_bundle.tar -C /content/srb
 #   !cd /content/srb && bash scripts/colab_index.sh siglip-so400m-384 1-5
 #
+# Gated models (medsiglip-448) also need HF_TOKEN. Add it once in Colab's Secrets panel
+# (key icon, name HF_TOKEN, notebook access on), then in a cell before the one above:
+#   import os; from google.colab import userdata; os.environ["HF_TOKEN"] = userdata.get("HF_TOKEN")
+# The token then lives only in the runtime's environment: never paste it into a cell,
+# and never write it to the bundle, a log or Drive.
+#
 # Output: MyDrive/srb/index_<model>_<tag>.tar. On the Mac, from the repo root:
 #   tar -xf ~/Downloads/index_<model>_<tag>.tar
 # which restores data/index/<model>/<tag>/; build_index.py then reports it as cached
@@ -25,6 +31,9 @@ cd "$(dirname "$0")/.."
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader \
   || { echo "no GPU: switch the Colab runtime to a GPU" >&2; exit 1; }
 [ -d "$DRIVE" ] || { echo "$DRIVE not found: mount Drive first" >&2; exit 1; }
+if [ "$MODEL" = medsiglip-448 ] && [ -z "${HF_TOKEN:-}" ]; then
+  echo "$MODEL is gated: set HF_TOKEN from Colab Secrets first (see the header)" >&2; exit 1
+fi
 
 # Colab's own Python (3.13) carries torchvision/torchaudio built for its torch, which
 # transformers imports and which break under our torch pin (see PROGRESS.md trap 12).

@@ -163,7 +163,7 @@ sources actually read; anything else is **unverified**.
 |---|---|---|---|
 | CLIP ViT-L/14 | WIT: 400M web image–text pairs, not released | **unverified** (corpus not public; web scrape could include published surgical frames) | Radford et al., ICML 2021 |
 | SigLIP so400m | WebLI web image–text pairs, not released | **unverified** (corpus not public) | Zhai et al., ICCV 2023 |
-| MedSigLIP-448 | MIMIC-CXR, Slake-VQA, PAD-UFES-20, SCIN, TCGA, CAMELYON, PMC-OA, Mendeley knee X-ray, MedQA, licensed/internal Google data, plus natural image–text pairs. No surgical or endoscopic video named. | **unverified**: no surgical video listed, but PMC-OA (figures from papers) may contain published Cholec80 frames | HF model card `google/medsiglip-448` |
+| MedSigLIP-448 | MIMIC-CXR, Slake-VQA, PAD-UFES-20, SCIN, TCGA, CAMELYON, PMC-OA, Mendeley knee X-ray, MedQA, licensed/internal Google data, plus natural image–text pairs. No surgical or endoscopic video named. | **unverified**: no surgical video listed, but PMC-OA (figures from papers) may contain published Cholec80 frames | HF model card `google/medsiglip-448` @ `9cea28a1` (re-read 8 Oct 2026) |
 | SurgVLP / HecVL / PeskaVLP | "(image, text) pairs from surgical video lectures" with ASR transcripts; lecture sources not named in the README | **unverified** (read the SVL paper before Week 3) | CAMMA-public/SurgVLP README |
 | EndoFM / SurgeNet-style | — | **unverified** (not read) | — |
 
