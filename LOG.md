@@ -36,6 +36,14 @@ excluded and scored lowest. 490 tests pass. **Dev checks only; no result produce
 **Next (Week 2):** write and commit `docs/preregistration.md` first (decides open
 decision #1, near-duplicate frames); then more backbones as time allows (#4).
 
+### 2026-10-08 — Week 2 starts late: slip logged, test scoring locked
+
+**Slip:** nothing happened between the Week 1 commit (29 Sep) and 8 Oct, so Week 2
+(scheduled 3–9 Oct) starts about a week late. Buffer rule: cut scope from the bottom
+(LoRA, then CholecT50, then the demo); the paper date does not move. Within Week 2 the
+pre-registration comes first and model count is what gets cut (decision #4).
+Test-split scoring now has its own lock, independent of the fetch guard (`66faa00`).
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.

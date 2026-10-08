@@ -5,8 +5,9 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 29 Sep 2026 18:30 IST. Week 1 tasks 0–5 all committed (Task 3
-`ed2e57c`, Task 5 `dd065b1`); only the end-of-week report is left.
+**Last updated:** 8 Oct 2026. Week 1 complete (29 Sep; end-of-week report delivered
+8 Oct). Week 2 (scheduled 3–9 Oct) started 8 Oct, about a week late (see `LOG.md`).
+Test-split scoring now has its own lock (`66faa00`).
 **Status:** metrics tie-neutral, overlap guard in place, CLIP + SigLIP in the registry.
 Videos 1–5 fetched, extracted (14,266 frames) and indexed with **both** CLIP and SigLIP
 (built on a Colab T4; see §1a); dev eval run on both. **No result produced.**
@@ -262,23 +263,24 @@ skipped on a re-run. To resume, re-run the same command **with the same
 
 ## 4. Next up
 
-Target: *index built for videos 1–5; toy retrieval works.* In order:
+Week 1 is done (§1a). **Week 2, in priority order** (pre-registration beats model count;
+if time runs out, cut models, never the pre-registration):
 
-0. ~~video04 early end-to-end check~~ — **done**, see §1a.
-1–4. ~~fetch, extract, index, dev eval for videos 1–5~~ — **done (27–29 Sep)**, see
-   §1a. CLIP and SigLIP were both indexed on a Colab T4 (SigLIP swapped on the Mac, trap
-   11), after a cross-device check against the Mac CLIP index.
-5. ~~Fix the eval banner, commit Task 3~~ — **done 29 Sep**: `77df245` (M2CAI16-workflow
-   overlap follow-up), `ed2e57c` (Task 3), `dd065b1` (Task 5), then LOG/PROGRESS. Was: commit Task 3 (with the measured stats and 80-video extrapolation in
-   `docs/datasets.md`, replacing the 5–10 GB estimate; close decision #3 in `LOG.md`),
-   then Task 5. Add the Week 1 line to `LOG.md`.
-6. End-of-week report (see the private Week 1 notes for the checklist).
+1. **Pre-registration** (`docs/preregistration.md`): Arnav decides open decision #1
+   (near-duplicate frames), the RQ1 headline per query, the uncertainty method and the
+   RQ5 sampling procedure; queries drafted from label definitions and the literature
+   and shown to Arnav before committing; predictions are Arnav's own. Then commit,
+   `git tag prereg-v1`, push, and record the hash in `LOG.md`.
+2. **MedSigLIP-448** in the registry (gated: HAI-DEF terms + `HF_TOKEN`), smoke test on
+   MPS with tiny batches.
+3. **Full Cholec80 extraction:** videos 6–40 now (measure the CAMMA server speed
+   first); videos 41–80 only after `prereg-v1` is on GitHub, with the fetch/extract/
+   index guard lifted in its own commit citing the hash.
+4. **PeskaVLP:** separate `.venv-surgvlp`, 1-day timebox, then document and move on.
 
-**Week 2 has priority conflict already flagged:** pre-registration beats model count.
-Do not compute anything on videos 41–80 before `docs/preregistration.md` is committed
-(the fetch/extract/index scripts refuse 41–80).
-
----
+**Test scoring stays locked all of Week 2.** `srb.retrieval.TEST_SCORING_UNLOCKED` is
+`False`; `evaluate()` and `eval_retrieval.py` refuse any Cholec80 video in 41–80. This
+lock is separate from the fetch/extract/index guard and is lifted only in Week 3.
 
 ## 5. Open decisions and parked work
 
@@ -289,9 +291,6 @@ manifest passes `tests/test_manifest.py`); #4 Week 2 overload. Closed: #5 ties.
 
 ## 6. Manual actions still outstanding for Arnav
 
-* Keep the Mac awake and online until `video03.mp4: OK` appears in
-  `data/fetch_videos.log` (expected around 02:45 on 27 Sep at ~170 KB/s). If it stops,
-  re-run the §1a fetch command with `--connections 16`; it resumes.
 * Close VS Code and Chrome before indexing, and start Claude Code from Terminal.app
   (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
