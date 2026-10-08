@@ -4,6 +4,11 @@ Similarities are computed in **float32** from upcast embeddings (``load_index``
 returns float32) and handed to the metrics as float64. Every row reports the tie count
 of its score vector (``count_ties``), since the metrics' tie handling only matters if
 ties exist.
+
+**No Cholec80 test video (41-80) is scored** until ``TEST_SCORING_UNLOCKED`` is flipped,
+deliberately and in its own commit, after the pre-registration (Week 3). This guard is
+independent of the fetch/extract/index guards, which are lifted earlier: having test
+frames on disk must not make them scoreable.
 """
 
 from __future__ import annotations
@@ -13,6 +18,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from srb.datasets.overlap import CHOLEC80_TEST_IDS
 from srb.metrics import (
     average_precision,
     count_ties,
@@ -20,6 +26,23 @@ from srb.metrics import (
     r_precision,
     random_baseline_ap,
 )
+
+
+TEST_SCORING_UNLOCKED = False
+
+
+def refuse_test_scoring(video_ids) -> None:
+    """Raise if any Cholec80 video ID in ``video_ids`` is a test video (41-80)."""
+    bad = sorted({int(v) for v in video_ids} & CHOLEC80_TEST_IDS)
+    if bad and not TEST_SCORING_UNLOCKED:
+        raise PermissionError(f"refusing to score Cholec80 test videos {bad}: test scoring "
+                              "is locked until Week 3 (see docs/preregistration.md)")
+
+
+def _cholec80_ids(manifest: pd.DataFrame):
+    if "dataset" in manifest:
+        manifest = manifest[manifest["dataset"] == "cholec80"]
+    return manifest["video_id"].unique()
 
 
 @dataclass(frozen=True)
@@ -47,6 +70,7 @@ def scores_for(text_emb: np.ndarray, frame_emb: np.ndarray) -> np.ndarray:
 
 
 def evaluate(queries: list[Query], scores: np.ndarray, manifest: pd.DataFrame) -> pd.DataFrame:
+    refuse_test_scoring(_cholec80_ids(manifest))
     rows = []
     for q, s in zip(queries, scores):
         rel = q.relevant(manifest)

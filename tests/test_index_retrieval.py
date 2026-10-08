@@ -87,3 +87,50 @@ def test_evaluate_on_fake_embeddings(frames):
     assert t.loc["hook", "ap"] == 1.0
     assert np.isnan(t.loc["neg", "ap"])
     assert {"tied_frames", "tied_groups"} <= set(t.columns)
+
+
+# --- test-split scoring lock (stays until Week 3, independent of the fetch guard) ---
+
+def test_test_scoring_is_locked():
+    from srb import retrieval
+    assert retrieval.TEST_SCORING_UNLOCKED is False
+
+
+@pytest.mark.parametrize("ids", [[41], [80], [1, 2, 60], range(1, 81)])
+def test_refuse_test_scoring_raises_on_any_test_video(ids):
+    from srb.retrieval import refuse_test_scoring
+    with pytest.raises(PermissionError, match="test videos"):
+        refuse_test_scoring(ids)
+
+
+def test_refuse_test_scoring_allows_train_and_val():
+    from srb.retrieval import refuse_test_scoring
+    refuse_test_scoring(range(1, 41))
+
+
+def test_evaluate_refuses_manifest_with_test_video(frames):
+    m = frames.copy()
+    m.loc[3, "video_id"] = 41
+    q = [Query("p", "x", "phase", "Preparation")]
+    with pytest.raises(PermissionError):
+        evaluate(q, np.zeros((1, len(m)), dtype=np.float32), m)
+
+
+@pytest.mark.filterwarnings("ignore:k=10 exceeds the number of frames")
+def test_evaluate_ignores_other_datasets_ids(frames):
+    """Endoscapes video 41 is not Cholec80 video 41."""
+    m = frames.copy()
+    m.loc[3, ["dataset", "video_id"]] = ["endoscapes", 41]
+    q = [Query("p", "x", "phase", "Preparation")]
+    evaluate(q, np.arange(len(m), dtype=np.float32)[None], m)
+
+
+def test_eval_script_refuses_test_videos_before_loading_anything():
+    import subprocess
+    import sys
+    from pathlib import Path
+    script = Path(__file__).resolve().parents[1] / "scripts" / "eval_retrieval.py"
+    r = subprocess.run([sys.executable, str(script), "--model", "clip-vit-l14",
+                        "--videos", "40-41"], capture_output=True, text=True, timeout=300)
+    assert r.returncode != 0
+    assert "refusing to score Cholec80 test videos [41]" in r.stderr

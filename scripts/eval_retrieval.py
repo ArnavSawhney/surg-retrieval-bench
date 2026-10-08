@@ -22,11 +22,11 @@ import pandas as pd
 
 from srb.index import load_index
 from srb.models.registry import _SPECS, get_backbone
-from srb.retrieval import Query, evaluate, scores_for
+from srb.retrieval import Query, evaluate, refuse_test_scoring, scores_for
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_index import video_tag  # noqa: E402
-from fetch_cholec80_videos import parse_videos, refuse_test_videos  # noqa: E402
+from fetch_cholec80_videos import parse_videos  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -59,7 +59,10 @@ def main() -> None:
     ap.add_argument("--videos", required=True)
     args = ap.parse_args()
     videos = parse_videos(args.videos)
-    refuse_test_videos(videos)
+    try:  # own guard, not fetch's: it stays when fetch/extract/index are unlocked
+        refuse_test_scoring(videos)
+    except PermissionError as e:
+        sys.exit(str(e))
 
     emb, manifest, meta = load_index(ROOT / "data" / "index" / args.model / video_tag(videos))
     if meta["revision"] != _SPECS[args.model].revision:
