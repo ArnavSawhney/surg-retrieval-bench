@@ -5,8 +5,8 @@
 # In a Colab notebook with a GPU runtime (Runtime > Change runtime type > T4 GPU):
 #
 #   from google.colab import drive; drive.mount('/content/drive')
-#   !mkdir -p /content/srb && tar -xf /content/drive/MyDrive/srb/srb_bundle.tar -C /content/srb
-#   !cd /content/srb && bash scripts/colab_index.sh siglip-so400m-384 1-5
+#   !mkdir -p /content/srb && tar -xf /content/drive/MyDrive/srb/srb_bundle_videos_6-40.tar -C /content/srb
+#   !cd /content/srb && bash scripts/colab_index.sh siglip-so400m-384 6-40
 #
 # Gated models (medsiglip-448) also need HF_TOKEN. Add it once in Colab's Secrets panel
 # (key icon, name HF_TOKEN, notebook access on), then in a cell before the one above:

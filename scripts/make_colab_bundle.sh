@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Pack code + extracted frames + manifest into one tar for building an index on Colab.
 #
-#   bash scripts/make_colab_bundle.sh            -> data/colab/srb_bundle.tar
+#   bash scripts/make_colab_bundle.sh 6-40      -> data/colab/srb_bundle_videos_6-40.tar
+#   bash scripts/make_colab_bundle.sh           -> every video in the manifest
 #
-# Upload the tar to Google Drive at MyDrive/srb/, then follow scripts/colab_index.sh.
+# Bundles are made in chunks (6-40 now, 41-80 after prereg-v1) so that only one sits in
+# Drive at a time: delete the previous bundle from MyDrive/srb/ before uploading the
+# next. Upload to MyDrive/srb/, then follow scripts/colab_index.sh.
 # The tar holds Cholec80 frames (CC BY-NC-SA): keep it in your own Drive, never share
 # it publicly. It lives under data/, which is gitignored.
 #
@@ -13,18 +16,30 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-OUT=data/colab/srb_bundle.tar
+SPEC=${1:-}
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 
 [ -f data/cholec80/manifest.parquet ] || { echo "no manifest; run extract_frames.py" >&2; exit 1; }
 
-# Which videos the manifest holds (only those frames are packed).
-VIDEOS=$(.venv/bin/python -c "
+# Which videos to pack: the requested range, else every video in the manifest.
+SEL=$(.venv/bin/python - "$SPEC" <<'EOF'
+import sys
 import pandas as pd
-m = pd.read_parquet('data/cholec80/manifest.parquet')
-print(' '.join(f'video{v:02d}' for v in sorted(m.video_id.unique())))")
-echo "manifest videos: $VIDEOS"
+sys.path.insert(0, "scripts")
+from build_index import video_tag
+from fetch_cholec80_videos import parse_videos
+have = set(pd.read_parquet("data/cholec80/manifest.parquet").video_id)
+want = parse_videos(sys.argv[1]) if sys.argv[1] else sorted(have)
+missing = sorted(set(want) - have)
+if missing:
+    sys.exit(f"videos {missing} are not in the manifest yet; run extract_frames.py")
+print(video_tag(want), " ".join(f"video{v:02d}" for v in want))
+EOF
+)
+read -r TAG VIDEOS <<< "$SEL"
+OUT=data/colab/srb_bundle_${TAG}.tar
+echo "packing $TAG: $VIDEOS"
 for v in $VIDEOS; do
   [ -d "data/cholec80/frames/$v" ] || { echo "missing frames for $v" >&2; exit 1; }
 done
@@ -52,4 +67,4 @@ if [ -f "$REF/embeddings.npy" ]; then
   echo "packed CLIP video04 reference index"
 fi
 
-echo "wrote $OUT ($(du -h "$OUT" | cut -f1)); upload it to MyDrive/srb/"
+echo "wrote $OUT ($(du -h "$OUT" | cut -f1)); delete the previous bundle from MyDrive/srb/, then upload this one"
