@@ -291,11 +291,18 @@ manifest passes `tests/test_manifest.py`); #4 Week 2 overload. Closed: #5 ties.
 
 ## 6. Manual actions still outstanding for Arnav
 
+* **Overnight 8–9 Oct:** keep the Mac plugged in, lid open, online. Videos 6–40 are
+  being fetched and extracted by `scripts/fetch_extract.sh 6 40 32` under
+  `caffeinate -is` (log: `data/fetch_extract_6-40.log`, ~0.87 MB/s, ETA ~08:00 9 Oct).
+  If it stops, re-run the same command: extracted videos are skipped, fetches resume.
+* **Before the MedSigLIP Colab run:** sign in to Colab with the Google account that
+  holds the bundle (~30 GB free), and add `HF_TOKEN` to *that* account's Colab Secrets
+  (key icon, notebook access on). See the header of `scripts/colab_index.sh`.
+* Colab bundles go to Drive one chunk at a time (`make_colab_bundle.sh 6-40`, later
+  `41-80`): delete the previous bundle from `MyDrive/srb/` before uploading the next.
 * Close VS Code and Chrome before indexing, and start Claude Code from Terminal.app
   (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
   A full local Endoscapes copy is needed by Week 8; the full Cholec80 zip does not
   fit on this Mac and is not needed (videos are fetched individually).
-* Accept the **MedSigLIP** HAI-DEF terms on Hugging Face (needed in Week 2, not yet).
-* `export HF_TOKEN` in the shell. Not needed for CLIP — it already ran without one.
 * Optional: add a description and topics to the GitHub repo; it was created bare.
