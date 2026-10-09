@@ -164,7 +164,7 @@ sources actually read; anything else is **unverified**.
 | CLIP ViT-L/14 | WIT: 400M web image–text pairs, not released | **unverified** (corpus not public; web scrape could include published surgical frames) | Radford et al., ICML 2021 |
 | SigLIP so400m | WebLI web image–text pairs, not released | **unverified** (corpus not public) | Zhai et al., ICCV 2023 |
 | MedSigLIP-448 | MIMIC-CXR, Slake-VQA, PAD-UFES-20, SCIN, TCGA, CAMELYON, PMC-OA, Mendeley knee X-ray, MedQA, licensed/internal Google data, plus natural image–text pairs. No surgical or endoscopic video named. | **unverified**: no surgical video listed, but PMC-OA (figures from papers) may contain published Cholec80 frames | HF model card `google/medsiglip-448` @ `9cea28a1` (re-read 8 Oct 2026) |
-| SurgVLP / HecVL / PeskaVLP | "(image, text) pairs from surgical video lectures" with ASR transcripts; lecture sources not named in the README | **unverified** (read the SVL paper before Week 3) | CAMMA-public/SurgVLP README |
+| PeskaVLP (SurgVLP / HecVL family) | SVL: 1,326 surgical lecture videos (1,124 crawled from WebSurg with keywords "intervention" and "laparoscopic"; 202 from EAES and YouTube), including laparoscopic cholecystectomy; ASR transcripts and video metadata as text. Image encoder ResNet-50 from ImageNet (torchvision IMAGENET1K_V1), text encoder Bio_ClinicalBERT. Neither paper says whether Cholec80 videos or footage from them were excluded from SVL. | **unverified**: WebSurg is IRCAD Strasbourg's platform and Cholec80 was recorded in Strasbourg, so lectures showing the same surgical team, and possibly Cholec80 footage, cannot be ruled out. Flag every PeskaVLP Cholec80 result accordingly | Yuan et al., arXiv 2307.15220 §5.2 (SVL); Yuan et al., NeurIPS 2024, arXiv 2410.00263 §4, App. A.1, C (read 9 Oct 2026) |
 | EndoFM / SurgeNet-style | — | **unverified** (not read) | — |
 
 ## Citations
@@ -178,6 +178,11 @@ Cite the datasets and models you actually ran, in the form their authors ask for
 * Nwoye et al. *Rendezvous: Attention mechanisms for the recognition of surgical action
   triplets in endoscopic videos.* (CholecT50)
 * Yuan et al. *SurgVLP / HecVL / PeskaVLP.* CAMMA. <https://github.com/CAMMA-public/SurgVLP>
+* Yuan, Srivastav, Navab, Padoy. *Procedure-Aware Surgical Video-language Pretraining
+  with Hierarchical Knowledge Augmentation.* NeurIPS 2024. arXiv:2410.00263 (PeskaVLP)
+* Yuan, Srivastav, Yu, Lavanchy, Marescaux, Mascagni, Navab, Padoy. *Learning
+  Multi-modal Representations by Watching Hundreds of Surgical Video Lectures.*
+  arXiv:2307.15220 (SurgVLP, SVL dataset)
 * Google Health AI Developer Foundations. *MedSigLIP.*
 * Radford et al. *Learning Transferable Visual Models From Natural Language
   Supervision.* ICML 2021. (CLIP)

@@ -9,6 +9,8 @@ tolerant feature extraction.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 import torch
@@ -27,14 +29,13 @@ from srb.models.registry import (
 # --------------------------------------------------------------------------- #
 
 
-def test_registry_ships_clip_siglip_medsiglip():
-    """PeskaVLP runs in its own environment, not through this registry."""
-    assert list_backbones() == ["clip-vit-l14", "medsiglip-448", "siglip-so400m-384"]
+def test_registry_ships_the_four_preregistered_models():
+    assert list_backbones() == ["clip-vit-l14", "medsiglip-448", "peskavlp", "siglip-so400m-384"]
 
 
 def test_unknown_backbone_raises_with_the_available_names():
     with pytest.raises(KeyError, match="clip-vit-l14"):
-        get_backbone("peskavlp")
+        get_backbone("surgvlp")
 
 
 def test_medsiglip_is_gated_and_needs_hf_token(monkeypatch):
@@ -47,7 +48,8 @@ def test_medsiglip_is_gated_and_needs_hf_token(monkeypatch):
         _hf_token(required=True, model="google/medsiglip-448")
 
 
-@pytest.mark.parametrize("name", ["clip-vit-l14", "siglip-so400m-384", "medsiglip-448"])
+@pytest.mark.parametrize("name", ["clip-vit-l14", "siglip-so400m-384", "medsiglip-448",
+                                  "peskavlp"])
 def test_revision_is_pinned_to_a_commit_hash(name):
     """A floating 'main' revision would let an upstream re-upload change our numbers."""
     from srb.models.registry import _SPECS
@@ -280,3 +282,71 @@ def test_cosine_similarity_of_unit_embeddings_is_a_dot_product():
     sim = txt @ img.T
     assert sim.shape == (2, 3)
     assert np.all(sim <= 1.0 + 1e-6) and np.all(sim >= -1.0 - 1e-6)
+
+
+# --------------------------------------------------------------------------- #
+# PeskaVLP: separate environment behind a script boundary
+# --------------------------------------------------------------------------- #
+
+
+def test_peskavlp_pins_are_complete():
+    """Code commit, checkpoint hash and BERT revision are all pinned (no floating ids)."""
+    from srb.models.peskavlp_pins import PESKAVLP
+
+    hexdigits = set("0123456789abcdef")
+    for key, n in [("surgvlp_commit", 40), ("bert_revision", 40),
+                   ("checkpoint_sha256", 64), ("checkpoint_zip_sha256", 64)]:
+        assert len(PESKAVLP[key]) == n and set(PESKAVLP[key]) <= hexdigits, key
+    assert PESKAVLP["revision"] == PESKAVLP["surgvlp_commit"]
+
+
+def _fake_peskavlp(monkeypatch, tmp_path, script_body):
+    """A SubprocessBackbone pointed at a stub script run by this interpreter."""
+    import sys
+
+    from srb.models.registry import _SPECS, SubprocessBackbone
+
+    script = tmp_path / "stub.py"
+    script.write_text(script_body)
+    enc = SubprocessBackbone.__new__(SubprocessBackbone)
+    enc.name, enc.spec = "peskavlp", _SPECS["peskavlp"]
+    enc.root, enc.python = tmp_path, Path(sys.executable)
+    enc.device_arg, enc.device, enc.dtype = None, torch.device("cpu"), torch.float32
+    enc.batch_size, enc.embed_dim = 32, 4
+    monkeypatch.setattr(enc, "spec", type(enc.spec)(**{**enc.spec.__dict__, "script": "stub.py"}))
+    return enc
+
+
+STUB = """
+import json, sys, numpy as np
+a = sys.argv[1:]
+texts = json.loads(open(a[a.index("--texts") + 1]).read())
+emb = np.arange(1, 4 * len(texts) + 1, dtype=np.float32).reshape(len(texts), 4)
+np.save(a[a.index("--out") + 1], emb)
+"""
+
+
+def test_peskavlp_text_goes_through_the_subprocess_and_is_normalised(monkeypatch, tmp_path):
+    enc = _fake_peskavlp(monkeypatch, tmp_path, STUB)
+    out = enc.encode_text(["a grasper", "a hook"])
+    assert out.shape == (2, 4) and out.dtype == np.float32
+    np.testing.assert_allclose(np.linalg.norm(out, axis=1), 1.0, rtol=1e-6)
+
+
+def test_peskavlp_subprocess_does_not_see_hf_token(monkeypatch, tmp_path):
+    body = "import os, sys\nif 'HF_TOKEN' in os.environ: sys.exit('HF_TOKEN leaked')\n" + STUB
+    enc = _fake_peskavlp(monkeypatch, tmp_path, body)
+    monkeypatch.setenv("HF_TOKEN", "not-a-real-token")
+    enc.encode_text(["a grasper"])
+
+
+def test_peskavlp_subprocess_failure_raises(monkeypatch, tmp_path):
+    enc = _fake_peskavlp(monkeypatch, tmp_path, "import sys; sys.exit('boom')")
+    with pytest.raises(RuntimeError, match="boom"):
+        enc.encode_text(["a grasper"])
+
+
+def test_peskavlp_refuses_image_encoding_through_the_registry(monkeypatch, tmp_path):
+    enc = _fake_peskavlp(monkeypatch, tmp_path, STUB)
+    with pytest.raises(NotImplementedError, match="index frames with"):
+        enc.encode_image([Image.new("RGB", (8, 8))])

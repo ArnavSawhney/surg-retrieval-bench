@@ -5,7 +5,7 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 8 Oct 2026. Week 1 complete (29 Sep; end-of-week report delivered
+**Last updated:** 9 Oct 2026.
 8 Oct). Week 2 (scheduled 3–9 Oct) started 8 Oct, about a week late (see `LOG.md`).
 Test-split scoring now has its own lock (`66faa00`).
 **Status:** metrics tie-neutral, overlap guard in place, CLIP + SigLIP in the registry.
@@ -202,6 +202,14 @@ skipped on a re-run. To resume, re-run the same command **with the same
   cache, pinned to `32bd6428…` and `9fdffc58…`.
 * `gh` is authenticated as `ArnavSawhney`; `origin` is set and `main` tracks it.
 * Device: MPS works. fp16 is **rejected** off cuda by design.
+* **PeskaVLP setup** (separate env; never install SurgVLP into `.venv`):
+  `git clone https://github.com/CAMMA-public/SurgVLP third_party/SurgVLP` and check out
+  `85e858998eec47614614b89f6af1363e0ad3f47b`;
+  `python3.11 -m venv .venv-surgvlp && .venv-surgvlp/bin/pip install -r envs/surgvlp-requirements.txt`;
+  download `PeskaVLP.zip` (URL in `src/srb/models/peskavlp_pins.py`) into
+  `data/checkpoints/peskavlp/` with parallel range requests and unzip it. The script
+  checks the commit and both SHA-256 pins before loading. Both `third_party/` and
+  `.venv-surgvlp/` are gitignored. Smoke: `.venv-surgvlp/bin/python scripts/peskavlp_encode.py smoke`.
 
 ---
 
@@ -258,6 +266,15 @@ skipped on a re-run. To resume, re-run the same command **with the same
     `colab_index.sh` now builds a clean **Python 3.11 venv with uv** at
     `/content/srb_venv` and `pip install -e .` into it, like the Mac. Resolver warnings
     about cudf/numba/google-colab came from Colab's system env and no longer apply.
+13. **The PeskaVLP checkpoint host (seafile.unistra.fr) is throttled to ~22 KB/s per
+    connection** (~6 h for the 495 MB zip) but honours HTTP ranges; 32 range requests
+    took ~15 min. SurgVLP's `setup.py` fails as an editable install (pkg_resources), so
+    it is imported from `third_party/SurgVLP` instead; it also needs `fvcore`,
+    `torchmetrics`, `pycm`, `scikit-learn` at import time. Its config file holds a
+    top-level `config` dict (`Config.fromfile(...).config.model_config`). SurgVLP calls
+    `from_pretrained` without a revision, so Bio_ClinicalBERT is passed as a pinned
+    local snapshot path, and the ResNet is built with `pretrained="random"` (every
+    weight comes from the checkpoint; this avoids an unpinned torchvision download).
 
 ---
 
@@ -276,7 +293,9 @@ if time runs out, cut models, never the pre-registration):
 3. **Full Cholec80 extraction:** videos 6–40 now (measure the CAMMA server speed
    first); videos 41–80 only after `prereg-v1` is on GitHub, with the fetch/extract/
    index guard lifted in its own commit citing the hash.
-4. **PeskaVLP:** separate `.venv-surgvlp`, 1-day timebox, then document and move on.
+4. ~~**PeskaVLP**~~ **done 9 Oct** (LOG.md): separate `.venv-surgvlp`, smoke and dev
+   check on 1–5 pass. Videos 6–40 are extracted (86,304 frames for 1–40), and the
+   Colab bundle `data/colab/srb_bundle_videos_6-40.tar` (4.6 GB) is built.
 
 **Test scoring stays locked all of Week 2.** `srb.retrieval.TEST_SCORING_UNLOCKED` is
 `False`; `evaluate()` and `eval_retrieval.py` refuse any Cholec80 video in 41–80. This
@@ -291,10 +310,12 @@ manifest passes `tests/test_manifest.py`); #4 Week 2 overload. Closed: #5 ties.
 
 ## 6. Manual actions still outstanding for Arnav
 
-* **Overnight 8–9 Oct:** keep the Mac plugged in, lid open, online. Videos 6–40 are
-  being fetched and extracted by `scripts/fetch_extract.sh 6 40 32` under
-  `caffeinate -is` (log: `data/fetch_extract_6-40.log`, ~0.87 MB/s, ETA ~08:00 9 Oct).
-  If it stops, re-run the same command: extracted videos are skipped, fetches resume.
+* **RQ1–RQ5 predictions** (numbers + falsifiers) for `docs/preregistration.md`: the
+  only thing blocking `prereg-v1`, which blocks fetching videos 41–80.
+* **Colab bundle 6–40** (optional, stretch indexing): don't upload the current tar; it
+  records a `-dirty` git hash (the pre-registration was uncommitted). It is rebuilt
+  right after the `prereg-v1` commit, then goes to `MyDrive/srb/` of the Colab account,
+  after deleting the older `srb_bundle.tar` there if present.
 * **Before the MedSigLIP Colab run:** sign in to Colab with the Google account that
   holds the bundle (~30 GB free), and add `HF_TOKEN` to *that* account's Colab Secrets
   (key icon, notebook access on). See the header of `scripts/colab_index.sh`.

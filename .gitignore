@@ -27,3 +27,7 @@ results/dev/
 
 # --- Machine-local config (paths to dataset zips) ---
 configs/local.yaml
+
+# --- PeskaVLP: separate env + pinned SurgVLP checkout (see scripts/peskavlp_index.py) ---
+.venv-surgvlp/
+third_party/

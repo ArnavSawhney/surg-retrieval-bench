@@ -16,9 +16,11 @@ Adding a backbone
 SigLIP and MedSigLIP are ``transformers`` dual encoders like CLIP, so they only need a
 new ``HFDualEncoder`` spec in ``_SPECS`` (SigLIP needs ``padding="max_length"`` for
 text, which is what ``text_padding`` is for). PeskaVLP / SurgVLP is not a
-``transformers`` model and will need its own ``Backbone`` subclass plus a separate
-environment -- but callers keep using ``get_backbone(name)`` and the two encode
-methods, so nothing downstream changes.
+``transformers`` model and needs its own environment (``.venv-surgvlp``), so
+``get_backbone("peskavlp")`` returns a ``SubprocessBackbone`` whose ``encode_text``
+runs ``scripts/peskavlp_encode.py`` in that environment. Callers keep using
+``get_backbone(name)`` and the encode methods, so nothing downstream changes. Its
+frame index is built by the same script (``index``), not by ``build_index.py``.
 
 Model revisions are pinned by commit hash (see ``_SPECS``) so that a silent upstream
 re-upload cannot change published numbers.
@@ -26,8 +28,12 @@ re-upload cannot change published numbers.
 
 from __future__ import annotations
 
+import json
 import os
+import subprocess
+import tempfile
 from abc import ABC, abstractmethod
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -35,7 +41,10 @@ import numpy as np
 import torch
 from PIL import Image
 
-__all__ = ["Backbone", "HFDualEncoder", "get_backbone", "list_backbones", "select_device"]
+from srb.models.peskavlp_pins import PESKAVLP
+
+__all__ = ["Backbone", "HFDualEncoder", "SubprocessBackbone", "get_backbone",
+           "list_backbones", "select_device"]
 
 
 # --------------------------------------------------------------------------- #
@@ -213,6 +222,66 @@ class HFDualEncoder(Backbone):
         return _projected_features(self.model.get_text_features(**batch))
 
 
+# --------------------------------------------------------------------------- #
+# models that live in their own environment (PeskaVLP)
+# --------------------------------------------------------------------------- #
+@dataclass(frozen=True)
+class SubprocessSpec:
+    """A backbone whose code runs in a separate venv, behind a script boundary."""
+
+    hf_id: str  # not necessarily on HF; recorded in index meta
+    revision: str  # code commit, used as the index cache key
+    python: str  # interpreter, relative to the repo root
+    script: str  # encoder script, relative to the repo root
+    embed_dim: int
+    default_batch_size: int = 32
+    notes: str = ""
+
+
+class SubprocessBackbone(Backbone):
+    """Text encoding through ``<python> <script> text``; frames are indexed by the
+    script's ``index`` command, so ``encode_image`` refuses rather than spawning a
+    process (and reloading the model) for every chunk of frames."""
+
+    def __init__(self, name: str, spec: SubprocessSpec, *, device: str | None = None,
+                 fp16: bool | None = None, batch_size: int | None = None):
+        if fp16:
+            raise ValueError(f"{name} runs in float32 only")
+        self.name, self.spec = name, spec
+        self.root = Path(__file__).resolve().parents[3]
+        self.python = self.root / spec.python
+        if not self.python.exists():
+            raise RuntimeError(f"{name} needs its own environment at {spec.python}; "
+                               "see PROGRESS.md (PeskaVLP setup)")
+        self.device_arg = device
+        self.device = torch.device(device or "cpu")  # where the subprocess is asked to run
+        self.dtype = torch.float32
+        self.batch_size = batch_size or spec.default_batch_size
+        self.embed_dim = spec.embed_dim
+
+    def _encode_image_batch(self, images: list[Image.Image]) -> torch.Tensor:
+        raise NotImplementedError(f"index frames with `{self.spec.python} {self.spec.script} "
+                                  "index --videos ...`, not through the registry")
+
+    def _encode_text_batch(self, texts: list[str]) -> torch.Tensor:
+        with tempfile.TemporaryDirectory() as tmp:
+            src, out = Path(tmp) / "texts.json", Path(tmp) / "emb.npy"
+            src.write_text(json.dumps(texts))
+            cmd = [str(self.python), str(self.root / self.spec.script)]
+            if self.device_arg:
+                cmd += ["--device", self.device_arg]
+            cmd += ["text", "--texts", str(src), "--out", str(out)]
+            env = {k: v for k, v in os.environ.items() if k != "HF_TOKEN"}  # not needed there
+            r = subprocess.run(cmd, cwd=self.root, env=env, capture_output=True, text=True)
+            if r.returncode != 0:
+                raise RuntimeError(f"{self.name} text encoder failed:\n{r.stderr[-2000:]}")
+            emb = np.load(out)
+        if emb.shape != (len(texts), self.embed_dim):
+            raise RuntimeError(f"{self.name} returned {emb.shape}, expected "
+                               f"({len(texts)}, {self.embed_dim})")
+        return torch.from_numpy(emb)
+
+
 def _embed_dim(config) -> int:
     """Output dimension: CLIP has ``projection_dim``; SigLIP has no projection layer
     config, and its pooled embedding has the vision tower's ``hidden_size``."""
@@ -259,9 +328,9 @@ def _hf_token(*, required: bool, model: str) -> str | None:
 # --------------------------------------------------------------------------- #
 # the registry
 # --------------------------------------------------------------------------- #
-# CLIP and SigLIP (Week 1), MedSigLIP (Week 2). PeskaVLP runs in its own environment
-# (see scripts/), not through this registry.
-_SPECS: dict[str, HFDualEncoderSpec] = {
+# CLIP and SigLIP (Week 1), MedSigLIP and PeskaVLP (Week 2). PeskaVLP runs in its own
+# environment behind scripts/peskavlp_encode.py (pins in srb.models.peskavlp_pins).
+_SPECS: dict[str, HFDualEncoderSpec | SubprocessSpec] = {
     "clip-vit-l14": HFDualEncoderSpec(
         hf_id="openai/clip-vit-large-patch14",
         revision="32bd64288804d66eefd0ccbe215aa642df71cc41",
@@ -301,6 +370,16 @@ _SPECS: dict[str, HFDualEncoderSpec] = {
         notes="Medical SigLIP (Google HAI-DEF). Gated: accept the HAI-DEF terms on HF and "
               "export HF_TOKEN. 448 px, embedding dim 1152.",
     ),
+    "peskavlp": SubprocessSpec(
+        hf_id=PESKAVLP["hf_id"],
+        revision=PESKAVLP["revision"],
+        python=PESKAVLP["python"],
+        script="scripts/peskavlp_encode.py",
+        embed_dim=PESKAVLP["embed_dim"],
+        default_batch_size=PESKAVLP["default_batch_size"],
+        notes="Surgical VLP (Yuan et al., NeurIPS 2024): ResNet-50 + Bio_ClinicalBERT, "
+              "224 px, 77 tokens, embedding dim 768. Separate env .venv-surgvlp.",
+    ),
 }
 
 
@@ -317,4 +396,6 @@ def get_backbone(name: str, *, device: str | None = None, fp16: bool | None = No
     """
     if name not in _SPECS:
         raise KeyError(f"unknown backbone {name!r}; available: {list_backbones()}")
-    return HFDualEncoder(name, _SPECS[name], device=device, fp16=fp16, batch_size=batch_size)
+    spec = _SPECS[name]
+    cls = SubprocessBackbone if isinstance(spec, SubprocessSpec) else HFDualEncoder
+    return cls(name, spec, device=device, fp16=fp16, batch_size=batch_size)

@@ -44,6 +44,28 @@ decision #1, near-duplicate frames); then more backbones as time allows (#4).
 pre-registration comes first and model count is what gets cut (decision #4).
 Test-split scoring now has its own lock, independent of the fetch guard (`66faa00`).
 
+### 2026-10-09 — Videos 6–40 extracted; PeskaVLP runs
+
+**Extraction:** `scripts/fetch_extract.sh 6 40 32` ran overnight (21:53–08:48), one
+video at a time, every fetch on its first attempt despite connection resets. The
+manifest now holds videos 1–40: 86,304 frames (71,000 train, 15,304 val), all
+854×480, frame files = manifest rows for every video, `tests/test_manifest.py` passes.
+Videos 15 and 37 have one more phase row than video frames (−1); the 1 fps sample at
+that end is the trailing one already dropped for lacking a tool row, so no used label
+points outside the video.
+
+**PeskaVLP** works, inside the 1-day timebox. Separate `.venv-surgvlp` (Python 3.11,
+torch 2.5.1, transformers 4.30.2, mmengine 0.7.0; `envs/surgvlp-requirements.txt`)
+behind `scripts/peskavlp_encode.py`; the main env reaches its text encoder through
+`get_backbone("peskavlp")` (a subprocess), and its frame index is written in the same
+format as `build_index.py`. Pins: SurgVLP @ `85e85899`, checkpoint by SHA-256 (the
+Seafile URL is unversioned), Bio_ClinicalBERT @ `d5892b39`. Smoke on MPS: 768-d,
+unit norm, bit-identical re-encode, tokens identical to `surgvlp.tokenize`, checkpoint
+loads with no missing or unexpected keys (`weights_only=True`). Index of videos 1–5:
+35.3 frames/s on MPS. Dev check on 1–5 with the 4 dev queries ran (results/dev/, not a
+result). Contamination row filled from both papers: **unverified**, since SVL is mostly
+WebSurg (IRCAD Strasbourg) lectures and Cholec80 was recorded in Strasbourg.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
@@ -86,11 +108,6 @@ Outside Session 1's scope. Not started.
   `scripts/eval_probe.py`, `scripts/eval_temporal.py` — Week 1 onwards.
 * `src/srb/datasets/cholec80.py`, `src/srb/datasets/endoscapes.py` — Week 1.
 * `src/srb/temporal.py` (moving average, HMM, causal TCN) — Weeks 6–7.
-* SigLIP and MedSigLIP registry entries — Week 2. Specs are stubbed as comments in
-  `registry.py`; MedSigLIP is gated and needs the HAI-DEF terms accepted plus
-  `HF_TOKEN`.
-* PeskaVLP / SurgVLP — Week 2, in a **separate environment** (mmengine and OpenAI-CLIP
-  pins conflict with `transformers`). Timebox the install to one day.
 * Classification, probe and temporal metrics (accuracy, macro-F1, tool mAP, Jaccard,
   edit score) — added to `metrics.py` when the experiments that need them arrive.
 * Per-experiment YAMLs in `configs/` — when there is an experiment to configure.

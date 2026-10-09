@@ -23,7 +23,7 @@ import pandas as pd
 import torch
 
 from srb.index import cache_is_valid, embed_frames, git_hash, manifest_hash, save_index
-from srb.models.registry import _SPECS, get_backbone
+from srb.models.registry import _SPECS, SubprocessSpec, get_backbone
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_cholec80_videos import parse_videos, refuse_test_videos  # noqa: E402
@@ -73,6 +73,9 @@ def main() -> None:
                 .sort_values(["video_id", "frame_idx_25fps"]).reset_index(drop=True))
     mhash = manifest_hash(manifest)
     spec = _SPECS[args.model]
+    if isinstance(spec, SubprocessSpec):
+        sys.exit(f"{args.model} runs in its own environment: "
+                 f"{spec.python} {spec.script} index --videos {args.videos}")
     out_dir = ROOT / "data" / "index" / args.model / video_tag(videos)
     if cache_is_valid(out_dir, spec.revision, mhash) and not args.force:
         print(f"cached: {out_dir.relative_to(ROOT)} (same revision and manifest); skipping")
