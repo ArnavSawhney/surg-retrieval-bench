@@ -104,6 +104,14 @@ Cholec80 mean), ~182k frames for all 80 videos come to **~14 GB and ~73 min of
 extraction**; the 40 test videos (~98.5k frames) to ~7.6 GB. Embeddings are small:
 182k × 1152 in float16 is about 0.4 GB per model.
 
+**Measured on all 80 videos (Oct 2026):** 184,498 frames (train 1–32: 71,000; val
+33–40: 15,304; test 41–80: 98,194), **12.04 GB** of JPEGs, 60.9 min of extraction in
+total; 74.9 GB of source video, fetched one video at a time and deleted after
+extraction. Every video has `video_frames = phase_rows` and drops exactly one trailing
+1 fps sample (phase but no tool row). Videos 1–77 are 854×480; **videos 78–80 are
+1920×1080** in the archive, and their frames are resized to the same 448 px short side
+(796×448 vs 797×448 for the others).
+
 The raw archives are far larger than the frames, and are **not** meant for a laptop.
 Run the full download and frame extraction on a machine with disk to spare
 (Colab/Kaggle), keep only the extracted frames, and delete the raw video once frames

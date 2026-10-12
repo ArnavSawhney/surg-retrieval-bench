@@ -5,6 +5,8 @@
 # On the Mac (bundles are licence-restricted: copy them only to a machine you control):
 #   shasum -a 256 data/colab/srb_bundle_videos_*.tar
 #   rsync -a --partial data/colab/srb_bundle_videos_1-5.tar root@<host>:/home/
+#   (the cross-device check reads frames/video04: if the 1-5 bundle is not uploaded,
+#    tar -cf - data/cholec80/frames/video04 | ssh <host> 'tar -x -C /home/srb')
 #   (if an upload drops: tail -c +$((REMOTE_SIZE+1)) <tar> | ssh <host> 'cat >> <tar>')
 # On the GPU machine, with HF_TOKEN in the environment only (for medsiglip-448; pipe it
 # in over ssh stdin, never as an argument or into a file):
