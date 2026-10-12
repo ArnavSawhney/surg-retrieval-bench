@@ -25,11 +25,11 @@ PeskaVLP) on public data, with a fixed test split and pre-registered predictions
 | **RQ4** | **Temporal context.** How much does temporal modelling over the embedding sequence (moving average, HMM, small causal TCN) improve phase recognition over independent single frames? |
 | **RQ5** | **Failure modes.** Where does each model break: smoke, motion blur, specular glare, bleeding, instrument occlusion? |
 
-The hypothesis under test is that surgical-specific models beat general ones
-zero-shot, that a linear probe closes most of the gap, and that temporal context
-matters more than the choice of backbone. It is stated so it can be **falsified**,
-and the predictions are committed in `docs/preregistration.md` before the test split
-is touched.
+The questions under test include whether surgical-specific models beat general ones
+zero-shot, how much of the gap a linear probe closes, and whether temporal context or
+the choice of backbone matters more. The predictions, each with what would falsify it,
+were committed in `docs/preregistration.md` (tag `prereg-v1`) before the test split
+was touched.
 
 ## Datasets
 
