@@ -19,6 +19,7 @@ dependencies = [
   "pandas==3.0.6",
   "pyarrow==25.0.1",
   "scikit-learn==1.9.1",
+  "scipy==1.17.1",  # digamma in srb.resample (already installed with scikit-learn)
   "pillow==12.3.0",
   "opencv-python==5.0.0.93",
   "torch==2.14.0",
