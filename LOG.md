@@ -127,6 +127,17 @@ positive target mean (2/7 are; its cosines sit on a narrow scale). No protocol c
 **Next:** finish 41–80 (manifest test on 1–80), bundle 41–80, PeskaVLP 41–80 on the
 Mac, CLIP/SigLIP/MedSigLIP 41–80 on an L4 (~₹85); Task 5 only after Arnav says go.
 
+### 2026-10-13 — Week 3, Task 3 done: 41–80 indexed by all four models
+
+All 80 videos fetched and extracted (184,498 frames; `docs/datasets.md`, `69ffa40`).
+`test_manifest.py`'s pre-prereg ban on test videos replaced by a split-label check
+(`f292f62`). PeskaVLP 41–80 on the Mac (28.94 frames/s). CLIP / SigLIP / MedSigLIP on a
+second L4 in float16: 90.07 / 34.13 / 24.89 frames/s, cross-check 0.99977, tars
+SHA-256-checked and reported cached. First launch stopped at the cross-check (no
+`frames/video04` in the 41–80 bundle); relaunched after copying it. The ~₹85 estimate
+was low: the upload (6.1 GB, one drop) and the failed launch added about an hour.
+**₹128.67**; Week 3 GPU total ₹230.07. Instance destroyed.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.

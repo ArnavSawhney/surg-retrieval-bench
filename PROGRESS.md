@@ -191,7 +191,7 @@ skipped on a re-run. To resume, re-run the same command **with the same
 | 0. Push + verify | done | `prereg-v1` tag object `3be99b5` peels to `ff2b6e5` on GitHub; push received 2026-10-12T14:02:13Z; `pytest` 516 passed, none skipped, truncation test passes for all 4 tokenizers |
 | 1. Bundles on a clean hash | done | `srb_bundle_videos_1-5.tar` (1.0 GB) and `_6-40.tar` (4.6 GB) at `db5ed24`; SHA-256 in `data/colab/SHA256SUMS`; old `srb_bundle.tar` deleted (Arnav approved) |
 | 2. Index 1–40 | **done**, all four models, 86,304 frames each | see below |
-| 3. 41–80 | guard lifted (`b09781b`), fetch running | `data/fetch_extract_41-80.log` |
+| 3. 41–80 | **done**: guard lifted (`b09781b`), fetched, extracted, all four models indexed (98,194 frames each) | `data/fetch_extract_41-80.log`, see below |
 | 4. Registered evaluation | code done (`60a352f`; parallel models `369ce40`); **val run done** (dev, `results/dev/registered_val_20261012-220609`, ~18 min per model in parallel), see LOG.md | `tests/test_resample.py`, `tests/test_evaluation.py` |
 
 **Index ranges.** An index is one folder per exact video range, and `eval_retrieval.py`
@@ -237,6 +237,27 @@ Instance destroyed 16:35Z after 2 h 24 min; **₹101.40** charged (balance befor
 after). Remote run log: `data/jarvis_out/run_1-40.log`.
 
 PeskaVLP 6–40 on the Mac (MPS, float32): 72,038 frames at 34.0 frames/s (2,125 s).
+
+**Videos 41–80.** All 40 CRC OK, frames = labelled samples − 1 trailing, totals in
+`docs/datasets.md`; `tests/test_manifest.py` passes on 1–80. Bundle
+`srb_bundle_videos_41-80.tar` (6.1 GB, SHA-256 `8a8dce12e8a9…`, git `4aed6ba`).
+PeskaVLP 41–80 on the Mac: 98,194 frames at 28.94 frames/s. CLIP, SigLIP and MedSigLIP
+on a second L4 (instance 535763, same rate, same procedure), float16, batch 32; the
+upload dropped once at 4.83 GB and was resumed and SHA-256-checked; the first launch
+stopped because the cross-device check reads `frames/video04`, which is not in the 41–80
+bundle (copied over, relaunched; note added to `gpu_index.sh`). Cross-check min cosine
+0.99977 again.
+
+| model | frames/s | wall time (UTC) | norms | index tar SHA-256 (first 12) |
+|---|---|---|---|---|
+| CLIP ViT-L/14 | 90.07 | 18:40–18:59 | 0.9998–1.0002 | `7ed24af8eb42` |
+| SigLIP so400m-384 | 34.13 | 18:59–19:47 | 0.9999–1.0001 | `0b9b57f02e5a` |
+| MedSigLIP-448 | 24.89 | 19:47–20:53 | 0.9999–1.0002 | `6d18c8796145` |
+
+Each tar SHA-256-checked on both ends, untarred, reported **cached** by `build_index.py
+--videos 41-80`. Instance destroyed 20:56Z after about 3 h 07 min; **₹128.67** charged.
+L4 total for Week 3: **₹230.07** over two sessions. Remote run log:
+`data/jarvis_out/run_41-80.log`.
 
 ## 2. Environment (reproduce this exactly)
 
