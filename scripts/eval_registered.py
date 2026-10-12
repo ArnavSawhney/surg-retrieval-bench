@@ -23,6 +23,7 @@ import datetime as dt
 import json
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -65,12 +66,23 @@ def load_pool(model: str, split: str) -> tuple[np.ndarray, pd.DataFrame, dict]:
     return emb[keep], manifest[keep].reset_index(drop=True), meta
 
 
+def _evaluate(job) -> tuple:
+    """One model in its own process: every model gets the same resamples (fixed seed)."""
+    model, split, boot, text = job
+    t0 = time.time()
+    emb, manifest, meta = load_pool(model, split)
+    counts = resample_counts(manifest.video_id.nunique(), boot, BOOT_SEED)
+    ev = evaluate_model(model, emb, manifest, text, counts)
+    return ev, meta.get("git_hash"), round(time.time() - t0, 1)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--split", required=True, choices=sorted(SPLITS))
     ap.add_argument("--models", nargs="+", default=list(MODELS), choices=MODELS)
     ap.add_argument("--boot", type=int, default=B_CONFIRMATORY,
                     help="resamples (the registered value is 10,000; lower only for a dry run)")
+    ap.add_argument("--jobs", type=int, default=4, help="models evaluated in parallel")
     args = ap.parse_args()
 
     ghash = git_hash(ROOT)
@@ -84,27 +96,20 @@ def main() -> None:
            if args.split == "val" else ROOT / "results" / "test")
     out.mkdir(parents=True, exist_ok=True)
 
-    evals, counts, n_videos, runtime, index_hash = {}, None, None, {}, {}
-    for model in args.models:
-        t0 = time.time()
-        emb, manifest, meta = load_pool(model, args.split)
-        if counts is None:
-            n_videos = manifest.video_id.nunique()
-            counts = resample_counts(n_videos, args.boot, BOOT_SEED)
-        text = text_embeddings(model, texts)
-        print(f"{model}: {len(manifest)} frames, {n_videos} videos, B = {args.boot}", flush=True)
-        ev = evaluate_model(model, emb, manifest, text, counts)
-        evals[model] = ev
-        index_hash[model] = meta.get("git_hash")
+    text = {m: text_embeddings(m, texts) for m in args.models}  # one model at a time
+    jobs = [(m, args.split, args.boot, text[m]) for m in args.models]
+    with ProcessPoolExecutor(max_workers=min(args.jobs, len(jobs))) as pool:
+        done = list(pool.map(_evaluate, jobs))
+    evals, runtime, index_hash = {}, {}, {}
+    for model, (ev, ihash, seconds) in zip(args.models, done):
+        evals[model], index_hash[model], runtime[model] = ev, ihash, seconds
         for name in ("per_query", "per_target", "classification", "calibration"):
             df = getattr(ev, name).copy()
             df.insert(0, "label", label)
             df.insert(1, "model", model)
             df.to_csv(out / f"{model}_{name}.csv", index=False)
-        runtime[model] = round(time.time() - t0, 1)
-        print(f"  overall mAP {ev.summary['overall_map']:.4f} "
-              f"(prevalence level {ev.summary['overall_prevalence']:.4f}), "
-              f"{runtime[model]} s", flush=True)
+        print(f"{model}: {ev.summary['n_frames']} frames, {ev.summary['n_videos']} videos, "
+              f"B = {args.boot}, {seconds} s", flush=True)
 
     summary = pd.concat([summarise(ev) for ev in evals.values()], ignore_index=True)
     pairs, flips = compare_models(evals)
@@ -135,7 +140,8 @@ def main() -> None:
     show = summary[summary.metric.isin(keys)]
     with pd.option_context("display.width", 200, "display.float_format", "{:.4f}".format):
         print(show.pivot(index="metric", columns="model", values="value").loc[keys].to_string())
-        print(pairs.to_string(index=False))
+        if len(pairs):
+            print(pairs.to_string(index=False))
     print(f"*** {label} ***\nwrote {out.relative_to(ROOT)}")
 
 
