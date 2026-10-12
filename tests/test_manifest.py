@@ -4,7 +4,7 @@ Runs only when data/cholec80/manifest.parquet exists (it is gitignored: it is
 label-derived per-frame data). Checks that every extracted frame has exactly one
 canonical phase and a full tool vector, that frame counts match the label counts
 (with the single end-of-video tail sample accounted for), that files exist, and that
-nothing from the test split was touched.
+test videos (41-80) are labelled as the test split.
 """
 
 from __future__ import annotations
@@ -33,8 +33,12 @@ def test_columns(manifest):
                                       "t_sec", "path", "phase", *TOOL_COLUMNS]
 
 
-def test_no_test_videos(manifest):
-    assert not set(manifest.video_id) & CHOLEC80_TEST_IDS
+def test_test_videos_are_labelled_test(manifest):
+    """Since prereg-v1 (ff2b6e5) test videos may be on disk; they must carry split 'test'
+    (scoring them is locked separately, srb.retrieval.TEST_SCORING_UNLOCKED)."""
+    test_rows = manifest.video_id.isin(CHOLEC80_TEST_IDS)
+    assert (manifest.split[test_rows] == "test").all()
+    assert (manifest.split[~test_rows] != "test").all()
 
 
 def test_split_follows_our_rule(manifest):
