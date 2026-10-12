@@ -5,10 +5,10 @@ returns float32) and handed to the metrics as float64. Every row reports the tie
 of its score vector (``count_ties``), since the metrics' tie handling only matters if
 ties exist.
 
-**No Cholec80 test video (41-80) is scored** until ``TEST_SCORING_UNLOCKED`` is flipped,
-deliberately and in its own commit, after the pre-registration (Week 3). This guard is
-independent of the fetch/extract/index guards, which are lifted earlier: having test
-frames on disk must not make them scoreable.
+Cholec80 test videos (41-80) are scored only while ``TEST_SCORING_UNLOCKED`` is True. It
+was flipped in its own commit after the pre-registration (prereg-v1, ff2b6e5), once
+validation had run, for the single registered test run (scripts/eval_registered.py).
+The guard stays in place so it can be re-locked by flipping the flag back.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from srb.metrics import (
 )
 
 
-TEST_SCORING_UNLOCKED = False
+TEST_SCORING_UNLOCKED = True  # unlocked after prereg-v1 (ff2b6e5); see module docstring
 
 
 def refuse_test_scoring(video_ids) -> None:

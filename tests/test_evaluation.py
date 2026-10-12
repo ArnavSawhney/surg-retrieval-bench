@@ -137,7 +137,9 @@ def test_compare_models_holm_and_flips(pool):
     assert flips.order_changes_fraction.between(0, 1).all() and flips.targets.eq(14).all()
 
 
-def test_refuses_test_videos(pool):
+def test_refuses_test_videos_when_locked(pool, monkeypatch):
+    from srb import retrieval
+    monkeypatch.setattr(retrieval, "TEST_SCORING_UNLOCKED", False)
     manifest, emb, text = pool
     m = manifest.copy()
     m.loc[0, "video_id"] = 41

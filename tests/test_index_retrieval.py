@@ -124,15 +124,21 @@ def test_evaluate_on_fake_embeddings(frames):
     assert {"tied_frames", "tied_groups"} <= set(t.columns)
 
 
-# --- test-split scoring lock (stays until Week 3, independent of the fetch guard) ---
+# --- test-split scoring lock: unlocked after prereg-v1; the guard must still work ---
 
-def test_test_scoring_is_locked():
+@pytest.fixture
+def locked(monkeypatch):
     from srb import retrieval
-    assert retrieval.TEST_SCORING_UNLOCKED is False
+    monkeypatch.setattr(retrieval, "TEST_SCORING_UNLOCKED", False)
+
+
+def test_test_scoring_is_unlocked_after_prereg():
+    from srb import retrieval
+    assert retrieval.TEST_SCORING_UNLOCKED is True
 
 
 @pytest.mark.parametrize("ids", [[41], [80], [1, 2, 60], range(1, 81)])
-def test_refuse_test_scoring_raises_on_any_test_video(ids):
+def test_refuse_test_scoring_raises_on_any_test_video(ids, locked):
     from srb.retrieval import refuse_test_scoring
     with pytest.raises(PermissionError, match="test videos"):
         refuse_test_scoring(ids)
@@ -143,7 +149,7 @@ def test_refuse_test_scoring_allows_train_and_val():
     refuse_test_scoring(range(1, 41))
 
 
-def test_evaluate_refuses_manifest_with_test_video(frames):
+def test_evaluate_refuses_manifest_with_test_video(frames, locked):
     m = frames.copy()
     m.loc[3, "video_id"] = 41
     q = [Query("p", "x", "phase", "Preparation")]
@@ -168,4 +174,4 @@ def test_eval_script_refuses_test_videos_before_loading_anything():
     r = subprocess.run([sys.executable, str(script), "--model", "clip-vit-l14",
                         "--videos", "40-41"], capture_output=True, text=True, timeout=300)
     assert r.returncode != 0
-    assert "refusing to score Cholec80 test videos [41]" in r.stderr
+    assert "refusing to score Cholec80 test videos [41] with the dev queries" in r.stderr

@@ -22,7 +22,8 @@ import pandas as pd
 
 from srb.index import load_index
 from srb.models.registry import _SPECS, get_backbone
-from srb.retrieval import Query, evaluate, refuse_test_scoring, scores_for
+from srb.datasets.overlap import CHOLEC80_TEST_IDS
+from srb.retrieval import Query, evaluate, scores_for
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_index import video_tag  # noqa: E402
@@ -59,10 +60,10 @@ def main() -> None:
     ap.add_argument("--videos", required=True)
     args = ap.parse_args()
     videos = parse_videos(args.videos)
-    try:  # own guard, not fetch's: it stays when fetch/extract/index are unlocked
-        refuse_test_scoring(videos)
-    except PermissionError as e:
-        sys.exit(str(e))
+    bad = sorted(set(videos) & CHOLEC80_TEST_IDS)
+    if bad:  # dev queries only: test videos are scored only by eval_registered.py
+        sys.exit(f"refusing to score Cholec80 test videos {bad} with the dev queries; "
+                 "the registered test run is scripts/eval_registered.py --split test")
 
     emb, manifest, meta = load_index(ROOT / "data" / "index" / args.model / video_tag(videos))
     if meta["revision"] != _SPECS[args.model].revision:
