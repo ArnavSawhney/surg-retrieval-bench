@@ -8,7 +8,7 @@ import pytest
 from PIL import Image
 
 from srb.index import (cache_is_valid, embed_frames, git_hash, load_index, manifest_hash,
-                       save_index)
+                       merge_indexes, save_index)
 from srb.retrieval import Query, evaluate, scores_for
 
 
@@ -62,6 +62,41 @@ def test_load_rejects_tampered_manifest(tmp_path, frames):
 def test_git_hash_falls_back_to_bundle_file(tmp_path):
     (tmp_path / "GIT_HASH").write_text("abc123-dirty\n")
     assert git_hash(tmp_path) == "abc123-dirty"
+
+
+def _save_part(path, emb, manifest, **meta):
+    meta = {"model": "m", "revision": "abc", "dim": emb.shape[1], "storage_dtype": "float16",
+            "videos": sorted(set(manifest.video_id)),
+            "manifest_sha256": manifest_hash(manifest), **meta}
+    save_index(path, emb, manifest.reset_index(drop=True), meta)
+
+
+def test_merge_indexes_equals_direct_build(tmp_path, frames):
+    """Two parts that tile the expected rows merge to the hash of a direct build."""
+    full = pd.concat([frames, frames.assign(video_id=2)], ignore_index=True)
+    emb = np.random.default_rng(0).standard_normal((8, 3)).astype(np.float32)
+    _save_part(tmp_path / "a", emb[:4], full.iloc[:4], device="mps")
+    _save_part(tmp_path / "b", emb[4:], full.iloc[4:], device="cuda")
+    e, m, meta = merge_indexes([tmp_path / "a", tmp_path / "b"], full)
+    assert meta["manifest_sha256"] == manifest_hash(full) and meta["videos"] == [1, 2]
+    assert [p["device"] for p in meta["merged_from"]] == ["mps", "cuda"]
+    assert np.array_equal(e.astype(np.float16), emb.astype(np.float16))
+    save_index(tmp_path / "ab", e, m, meta)  # round-trips through load_index
+    assert np.array_equal(load_index(tmp_path / "ab")[0], e)
+
+
+def test_merge_indexes_refuses_bad_tiling_or_mixed_revisions(tmp_path, frames):
+    full = pd.concat([frames, frames.assign(video_id=2)], ignore_index=True)
+    emb = np.ones((8, 3), np.float32)
+    _save_part(tmp_path / "a", emb[:4], full.iloc[:4])
+    _save_part(tmp_path / "b", emb[4:], full.iloc[4:])
+    with pytest.raises(ValueError, match="tile"):  # wrong order
+        merge_indexes([tmp_path / "b", tmp_path / "a"], full)
+    with pytest.raises(ValueError, match="tile"):  # gap
+        merge_indexes([tmp_path / "a"], full)
+    _save_part(tmp_path / "c", emb[4:], full.iloc[4:], revision="other")
+    with pytest.raises(ValueError, match="revision"):
+        merge_indexes([tmp_path / "a", tmp_path / "c"], full)
 
 
 def test_scores_refuse_fp16():

@@ -100,3 +100,33 @@ def load_index(out_dir: Path) -> tuple[np.ndarray, pd.DataFrame, dict]:
     if meta.get("manifest_sha256") != manifest_hash(manifest):
         raise ValueError(f"corrupt index {out_dir}: manifest hash mismatch")
     return emb, manifest, meta
+
+
+def merge_indexes(part_dirs: list[Path], expected: pd.DataFrame
+                  ) -> tuple[np.ndarray, pd.DataFrame, dict]:
+    """Concatenate indexes of consecutive video ranges into one (e.g. 1-5 + 6-40 = 1-40).
+
+    Refuses unless every part has the same model, revision and dim, and the concatenated
+    rows equal ``expected`` (the manifest selection a direct build of the union would
+    embed) row for row, so the merged index is indistinguishable by hash from a direct
+    build. Part metas are kept under ``merged_from``. Returns (float32 emb, manifest,
+    meta without git_hash); fp16 -> float32 -> fp16 on save is exact.
+    """
+    parts = [load_index(d) for d in part_dirs]
+    metas = [m for _, _, m in parts]
+    for key in ("model", "revision", "dim", "storage_dtype"):
+        if len({str(m.get(key)) for m in metas}) != 1:
+            raise ValueError(f"parts differ in {key}: {[m.get(key) for m in metas]}")
+    manifest = pd.concat([m for _, m, _ in parts], ignore_index=True)
+    mhash = manifest_hash(manifest)
+    if mhash != manifest_hash(expected):
+        raise ValueError("parts do not tile the expected manifest (order, gap or overlap)")
+    emb = np.concatenate([e for e, _, _ in parts])
+    first = metas[0]
+    meta = {
+        "model": first["model"], "hf_id": first.get("hf_id"), "revision": first["revision"],
+        "videos": [v for m in metas for v in m["videos"]], "n_frames": len(emb),
+        "dim": first["dim"], "storage_dtype": first["storage_dtype"],
+        "manifest_sha256": mhash, "merged_from": metas,
+    }
+    return emb, manifest, meta
