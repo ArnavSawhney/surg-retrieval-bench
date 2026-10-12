@@ -91,6 +91,42 @@ client); the push that carried `ff2b6e5` and the tag was received at
 including `test_no_query_is_truncated_by_any_text_encoder` for all four tokenizers (its
 first run; no query exceeds any limit, so no deviation). Private-file check empty.
 
+### 2026-10-12 — Week 3, Tasks 1–4: bundles, 1–40 indexes, 41–80 unlocked, registered eval
+
+**Task 1.** Bundles rebuilt on a clean tree (`db5ed24`): 1–5 (1.0 GB) and 6–40 (4.6 GB);
+the old 29 Sep `srb_bundle.tar` deleted with Arnav's approval. README hypothesis line
+made neutral (`db5ed24`; the registered predictions are in the pre-registration).
+
+**Task 2.** All four models indexed over videos 1–40 (86,304 frames). CLIP, SigLIP and
+MedSigLIP on a Jarvis Labs L4 in **float16** (Arnav's choice after a bench: float32 on
+the L4 was only 2.3× a T4; float16 3.3–3.6× faster at min cosine ≥ 0.9998 vs float32 on
+the same frames). The prereg pins revisions, not the compute dtype, so not a deviation.
+Cross-device check CLIP video04 L4 float16 vs Mac float32: min cosine 0.99977. Full runs:
+101.75 / 34.98 / 25.58 frames/s; tars SHA-256-checked, reported cached locally. L4 time
+2 h 24 min, **₹101.40**, instance destroyed. PeskaVLP 6–40 on the Mac (34.0 frames/s),
+merged with 1–5 by `scripts/merge_index.py` (`6fde54d`). Procedure: `scripts/gpu_index.sh`.
+
+**Task 3.** Fetch/extract/index guard on 41–80 lifted (`b09781b`, cites `ff2b6e5`); the
+scoring lock stays. The first run stopped at video 41: the label files of 1–40 had been
+fetched by hand, so `fetch_cholec80_videos.py` now fetches them too (`509e346`).
+Videos 41–61 fetched and extracted by 22:20 IST, every one CRC OK, 854×480,
+`video_minus_phase_rows = 0`, frames = labelled samples − 1 trailing; still running.
+
+**Task 4.** Registered evaluation (`60a352f`, parallel `369ce40`): 70 target strings +
+7 negatives, headline = mean AP over rephrasings, R-Precision, per-video AP, ensemble,
+P@10/P@50, distinct videos in the top 50, calibration, zero-shot phase classification,
+paired video bootstrap (seed 20261011, B = 10,000, first 2,000 descriptive, Holm). The
+fast bootstrap equals the materialised resample exactly in tests. **Validation run on
+33–40, all four models: dev, not a result** (`results/dev/registered_val_20261012-220609`,
+~18 min per model, four in parallel). Nothing looks broken: no NaN AP, every target in
+6–8 of the 8 videos, ties present in every query and handled. Two behaviours, reported
+not fixed: CLIP, SigLIP and MedSigLIP's zero-shot phase classifier puts most frames on
+one prompt per role (up to 99%); PeskaVLP's negatives are not all below its lowest
+positive target mean (2/7 are; its cosines sit on a narrow scale). No protocol change.
+
+**Next:** finish 41–80 (manifest test on 1–80), bundle 41–80, PeskaVLP 41–80 on the
+Mac, CLIP/SigLIP/MedSigLIP 41–80 on an L4 (~₹85); Task 5 only after Arnav says go.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.

@@ -8,8 +8,8 @@ traps already hit.
 **Last updated:** 12 Oct 2026 (Week 3, day 1). **`prereg-v1` = `ff2b6e5`**, on GitHub
 since 2026-10-12T14:02:13Z. About 4 days behind plan (see `LOG.md`).
 **Status:** the protocol is frozen. Frames for videos 1–40 (86,304); 1–40 indexes for
-CLIP (L4, float16) and PeskaVLP (Mac, merged 1–5 + 6–40); SigLIP and MedSigLIP 1–40
-building on a Jarvis L4 (§1b). The 41–80 fetch guard is lifted (`b09781b`); the
+all four models (CLIP, SigLIP, MedSigLIP on a Jarvis L4 in float16; PeskaVLP on the
+Mac, merged 1–5 + 6–40; §1b). The 41–80 fetch guard is lifted (`b09781b`); the
 **scoring lock is still on** (lifted only in Task 5, after Arnav says go). The
 registered evaluation (`scripts/eval_registered.py`) is committed (`60a352f`).
 `results/results.csv` stays empty until Task 5. **No result produced.**
@@ -190,9 +190,9 @@ skipped on a re-run. To resume, re-run the same command **with the same
 |---|---|---|
 | 0. Push + verify | done | `prereg-v1` tag object `3be99b5` peels to `ff2b6e5` on GitHub; push received 2026-10-12T14:02:13Z; `pytest` 516 passed, none skipped, truncation test passes for all 4 tokenizers |
 | 1. Bundles on a clean hash | done | `srb_bundle_videos_1-5.tar` (1.0 GB) and `_6-40.tar` (4.6 GB) at `db5ed24`; SHA-256 in `data/colab/SHA256SUMS`; old `srb_bundle.tar` deleted (Arnav approved) |
-| 2. Index 1–40 | CLIP, PeskaVLP done; SigLIP, MedSigLIP running | see below |
+| 2. Index 1–40 | **done**, all four models, 86,304 frames each | see below |
 | 3. 41–80 | guard lifted (`b09781b`), fetch running | `data/fetch_extract_41-80.log` |
-| 4. Registered evaluation | code done (`60a352f`; parallel models `369ce40`); val run waits for all four 1–40 indexes | `tests/test_resample.py`, `tests/test_evaluation.py` |
+| 4. Registered evaluation | code done (`60a352f`; parallel models `369ce40`); **val run done** (dev, `results/dev/registered_val_20261012-220609`, ~18 min per model in parallel), see LOG.md | `tests/test_resample.py`, `tests/test_evaluation.py` |
 
 **Index ranges.** An index is one folder per exact video range, and `eval_retrieval.py`
 / `eval_registered.py` load one folder. `scripts/merge_index.py` (`6fde54d`) joins
@@ -222,6 +222,19 @@ dtype, so this is not a deviation; `meta.json` records `compute_dtype`. Checks:
 CLIP video04 L4 float16 vs Mac float32, min cosine **0.99977** (bar 0.999); CLIP
 videos 1–5, new L4 float16 vs old T4 float32 index, min cosine 0.99977, mean 0.999994.
 The old float32 `videos_1-5` indexes of CLIP and SigLIP stay on disk but are not used.
+
+Full 1–40 runs on the L4, float16, batch 32, git `db5ed24` (from the bundle):
+
+| model | frames/s | wall time (UTC) | norms | index tar SHA-256 (first 12) |
+|---|---|---|---|---|
+| CLIP ViT-L/14 | 101.75 | 14:40–14:55 | 0.9998–1.0003 | `90e64ca0c836` |
+| SigLIP so400m-384 | 34.98 | 14:55–15:36 | 0.9999–1.0001 | `be30c725600b` |
+| MedSigLIP-448 | 25.58 | 15:36–16:33 | 0.9999–1.0001 | `394ea53fc6a6` |
+
+Each tar was checked by SHA-256 on both ends, untarred, and reported **cached** by
+`build_index.py --videos 1-40` (same revision and manifest hash as the Mac manifest).
+Instance destroyed 16:35Z after 2 h 24 min; **₹101.40** charged (balance before and
+after). Remote run log: `data/jarvis_out/run_1-40.log`.
 
 PeskaVLP 6–40 on the Mac (MPS, float32): 72,038 frames at 34.0 frames/s (2,125 s).
 
@@ -332,10 +345,8 @@ PeskaVLP 6–40 on the Mac (MPS, float32): 72,038 frames at 34.0 frames/s (2,125
 Week 3, in order (scope as in the local planning notes). The pre-registration is frozen: any change of
 protocol is appended under "Deviations" and shown to Arnav before it is committed.
 
-1. Finish Task 2: download SigLIP and MedSigLIP `videos_1-40` from the L4 (check
-   SHA-256), untar, confirm `build_index.py` reports them cached, then **`jl destroy
-   535612`** and record the spend.
-2. Task 4 validation run: `python scripts/eval_registered.py --split val` (all four
+1. ~~Task 2~~ done (§1b).
+2. ~~Task 4 validation run~~ done 12 Oct (LOG.md). Was: `eval_registered.py --split val` (all four
    models, B = 10,000, ~10 min per model in parallel) → `results/dev/registered_val_*`.
    Report runtime and anything broken; change nothing in the protocol because of it.
 3. Task 3: `fetch_extract.sh 41 80 32` is running (started 2026-10-12 20:17 IST); per
