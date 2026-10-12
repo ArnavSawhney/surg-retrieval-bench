@@ -1,0 +1,22 @@
+label,model,query,score_mean,score_max,below_every_positive_target_mean,kind
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,neg_1,-0.04723465070128441,0.08885684609413147,True,negative
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,neg_2,-0.05730566382408142,0.0701541155576706,True,negative
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,neg_3,-0.0052369823679327965,0.043425802141427994,True,negative
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,neg_4,-0.05125383660197258,0.07749675959348679,True,negative
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,neg_5,-0.03395666182041168,0.05260423943400383,True,negative
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,neg_6,0.02565006911754608,0.11369914561510086,True,negative
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,neg_7,0.0017920065438374877,0.08764532953500748,True,negative
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,phase_preparation,0.14618100821971894,0.20971959829330444,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,phase_calottriangledissection,0.15281715542078017,0.2241046130657196,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,phase_clippingcutting,0.16078241020441056,0.2511154115200043,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,phase_gallbladderdissection,0.14892173707485198,0.2157866209745407,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,phase_gallbladderpackaging,0.12328796684741974,0.2344953566789627,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,phase_cleaningcoagulation,0.14284976720809936,0.2189842164516449,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,phase_gallbladderretraction,0.14983450174331664,0.22775951027870178,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,tool_grasper,0.11689746230840684,0.20910882949829102,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,tool_bipolar,0.10029122224077583,0.22924838960170746,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,tool_hook,0.11090643107891082,0.22097764909267426,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,tool_scissors,0.11815695315599442,0.2134639471769333,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,tool_clipper,0.09045674279332161,0.2247714102268219,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,tool_irrigator,0.09906777888536453,0.22454619407653809,,positive target
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384,tool_specimenbag,0.1089464083313942,0.2631430923938751,,positive target

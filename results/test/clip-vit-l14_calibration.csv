@@ -1,0 +1,22 @@
+label,model,query,score_mean,score_max,below_every_positive_target_mean,kind
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,neg_1,0.05250098928809166,0.20754216611385345,True,negative
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,neg_2,0.06332535296678543,0.2077607661485672,True,negative
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,neg_3,0.07733291387557983,0.20979218184947968,True,negative
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,neg_4,0.07013517618179321,0.2035524547100067,True,negative
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,neg_5,0.08949917554855347,0.21490532159805298,True,negative
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,neg_6,0.12620842456817627,0.2598636746406555,True,negative
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,neg_7,0.11666720360517502,0.21999222040176392,True,negative
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,phase_preparation,0.2440367728471756,0.32787734270095825,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,phase_calottriangledissection,0.2359314441680908,0.33942312002182007,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,phase_clippingcutting,0.25182359516620634,0.3319087326526642,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,phase_gallbladderdissection,0.2468945324420929,0.35425007343292236,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,phase_gallbladderpackaging,0.23240393102169038,0.33883345127105713,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,phase_cleaningcoagulation,0.23167747259140015,0.33607766032218933,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,phase_gallbladderretraction,0.23198139369487764,0.3477974832057953,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,tool_grasper,0.18369822204113007,0.3445380926132202,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,tool_bipolar,0.18847799450159072,0.3125452697277069,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,tool_hook,0.19976744949817657,0.3132968842983246,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,tool_scissors,0.1959034651517868,0.31701672077178955,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,tool_clipper,0.16895603239536286,0.3401302397251129,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,tool_irrigator,0.18943941444158555,0.32068321108818054,,positive target
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14,tool_specimenbag,0.19777280390262603,0.3280397653579712,,positive target

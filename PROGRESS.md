@@ -193,6 +193,7 @@ skipped on a re-run. To resume, re-run the same command **with the same
 | 2. Index 1–40 | **done**, all four models, 86,304 frames each | see below |
 | 3. 41–80 | **done**: guard lifted (`b09781b`), fetched, extracted, all four models indexed (98,194 frames each) | `data/fetch_extract_41-80.log`, see below |
 | 4. Registered evaluation | code done (`60a352f`; parallel models `369ce40`); **val run done** (dev, `results/dev/registered_val_20261012-220609`, ~18 min per model in parallel), see LOG.md | `tests/test_resample.py`, `tests/test_evaluation.py` |
+| 5. Test run (RESULT) | **done once**, 13 Oct: lock lifted `1759cb4` (cites `ff2b6e5`), `eval_registered.py --split test` at `1759cb4`, B = 10,000, ~63 min per model in parallel | `results/results.csv`, `results/test/`, LOG.md |
 
 **Index ranges.** An index is one folder per exact video range, and `eval_retrieval.py`
 / `eval_registered.py` load one folder. `scripts/merge_index.py` (`6fde54d`) joins
@@ -363,25 +364,19 @@ L4 total for Week 3: **₹230.07** over two sessions. Remote run log:
 
 ## 4. Next up
 
-Week 3, in order (scope as in the local planning notes). The pre-registration is frozen: any change of
-protocol is appended under "Deviations" and shown to Arnav before it is committed.
+Week 3 is done: Tasks 0–5, one test run (`results/results.csv`, LOG.md 13 Oct). The
+pre-registration is frozen: any change of protocol is appended under "Deviations" and
+shown to Arnav before it is committed. **Do not rerun the test split** without telling
+Arnav first; a rerun for a bug is a Deviation.
 
-1. ~~Task 2~~ done (§1b).
-2. ~~Task 4 validation run~~ done 12 Oct (LOG.md). Was: `eval_registered.py --split val` (all four
-   models, B = 10,000, ~10 min per model in parallel) → `results/dev/registered_val_*`.
-   Report runtime and anything broken; change nothing in the protocol because of it.
-3. Task 3: `fetch_extract.sh 41 80 32` is running (started 2026-10-12 20:17 IST); per
-   video check CRC, frames = labels, `video_minus_phase_rows = 0`, source size; then
-   `tests/test_manifest.py` on 1–80, `make_colab_bundle.sh 41-80`, PeskaVLP 41–80 on the
-   Mac, and the three GPU models on an L4 with `scripts/gpu_index.sh /home 41-80 …`
-   (~₹85 at the 1–40 rates).
-4. Task 5 only after Arnav says go: lift `TEST_SCORING_UNLOCKED` in its own commit
-   citing `ff2b6e5`, run `eval_registered.py --split test` once, write
-   `results/results.csv`.
+1. Week 4 scope from the local planning notes (not started).
+2. Comparison of the results with the registered predictions (§5 of the
+   pre-registration) only when Arnav asks for it.
 
-**Test scoring stays locked** until Task 5. `srb.retrieval.TEST_SCORING_UNLOCKED` is
-`False`; `evaluate()`, `evaluate_model()` and `eval_retrieval.py` refuse any Cholec80
-video in 41–80. The fetch/extract/index guard is gone (`b09781b`).
+**Test scoring is unlocked** (`1759cb4`, after `ff2b6e5`): `evaluate()` and
+`evaluate_model()` accept videos 41–80. `eval_retrieval.py` (dev queries) still refuses
+them; the registered test run is `eval_registered.py --split test`, which needs a clean
+tree and B = 10,000.
 
 ## 5. Open decisions and parked work
 
@@ -391,10 +386,9 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 
 ## 6. Manual actions still outstanding for Arnav
 
-* **Say go for Task 5** (test scoring) once the validation run and the 41–80 indexes
-  are in.
-* The 41–80 indexes need one more L4 session (~₹85 at the 1–40 rates); GPU spend so
-  far is in §1b.
+* Read the Week 3 report and the first RQ1 table (LOG.md, 13 Oct); say when to compare
+  with the registered predictions.
+* GPU spend so far is in §1b (two L4 sessions, Week 3); no instance is running.
 * Close VS Code and Chrome before any Mac indexing (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
   Endoscapes waits until Week 8 (decided 12 Oct).

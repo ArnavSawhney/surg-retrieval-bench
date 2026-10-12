@@ -1,0 +1,26 @@
+{
+  "label": "RESULT, Cholec80 test videos 41-80",
+  "split": "test",
+  "models": [
+    "clip-vit-l14",
+    "siglip-so400m-384",
+    "medsiglip-448",
+    "peskavlp"
+  ],
+  "boot": 10000,
+  "seed": 20261011,
+  "git_hash": "1759cb4dc975ec568be9277a2941f9979fa76fe2",
+  "index_git_hash": {
+    "clip-vit-l14": "4aed6bacb72425072bfd0691c97f2157855550e2",
+    "siglip-so400m-384": "4aed6bacb72425072bfd0691c97f2157855550e2",
+    "medsiglip-448": "4aed6bacb72425072bfd0691c97f2157855550e2",
+    "peskavlp": "4aed6bacb72425072bfd0691c97f2157855550e2"
+  },
+  "date": "2026-10-13T02:26:27",
+  "runtime_s": {
+    "clip-vit-l14": 3766.2,
+    "siglip-so400m-384": 3739.6,
+    "medsiglip-448": 3775.2,
+    "peskavlp": 3764.6
+  }
+}

@@ -1,0 +1,7 @@
+label,pair,targets,order_changes_fraction
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14 - siglip-so400m-384,14,0.6428571428571429
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14 - medsiglip-448,14,0.5
+"RESULT, Cholec80 test videos 41-80",clip-vit-l14 - peskavlp,14,0.6428571428571429
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384 - medsiglip-448,14,0.5714285714285714
+"RESULT, Cholec80 test videos 41-80",siglip-so400m-384 - peskavlp,14,0.7142857142857143
+"RESULT, Cholec80 test videos 41-80",medsiglip-448 - peskavlp,14,0.7857142857142857

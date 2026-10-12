@@ -138,6 +138,27 @@ SHA-256-checked and reported cached. First launch stopped at the cross-check (no
 was low: the upload (6.1 GB, one drop) and the failed launch added about an hour.
 **₹128.67**; Week 3 GPU total ₹230.07. Instance destroyed.
 
+### 2026-10-13 — Week 3, Task 5: the registered test run (RESULT)
+
+Arnav said go. Scoring lock lifted in its own commit (`1759cb4`, cites `ff2b6e5`);
+`eval_retrieval.py` still refuses test videos with the dev queries. `eval_registered.py
+--split test` run **once**, clean tree at `1759cb4`, indexes from `4aed6ba`, seed
+20261011, B = 10,000 (first 2,000 for descriptive intervals), four models in parallel,
+~63 min each. Outputs: `results/results.csv` (190 rows, `split=test`) and the full tables
+in `results/test/` (`run.json` has the hashes). No NaN anywhere; 759 tests pass.
+
+| model | overall mAP [95% CI] | lift | phase mAP | tool mAP |
+|---|---|---|---|---|
+| CLIP ViT-L/14 | 0.2026 [0.1966, 0.2117] | 1.28 | 0.1757 | 0.2296 |
+| SigLIP so400m-384 | 0.2636 [0.2541, 0.2740] | 1.66 | 0.2167 | 0.3105 |
+| MedSigLIP-448 | 0.2157 [0.2094, 0.2245] | 1.36 | 0.1822 | 0.2492 |
+| PeskaVLP | 0.2775 [0.2684, 0.2885] | 1.75 | 0.2689 | 0.2861 |
+
+Overall prevalence 0.1585. All six confirmatory pairwise differences in overall mAP
+reject at Holm 0.05 (largest Holm-adjusted p 0.0024). Intervals, the pairs table and the
+RQ2 order-change fractions are in `results/results.csv` and `results/test/`. Not compared
+with the registered predictions (not asked for yet). No rerun; no deviation.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
