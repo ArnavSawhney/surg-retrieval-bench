@@ -66,11 +66,29 @@ loads with no missing or unexpected keys (`weights_only=True`). Index of videos 
 result). Contamination row filled from both papers: **unverified**, since SVL is mostly
 WebSurg (IRCAD Strasbourg) lectures and Cholec80 was recorded in Strasbourg.
 
+### 2026-10-12 — Pre-registration committed: `prereg-v1` = `ff2b6e5`
+
+`docs/preregistration.md`, `src/srb/queries.py` and `tests/test_queries.py` committed
+as `ff2b6e5c553252749792ce72c05025b10de8bda9`, annotated tag `prereg-v1`. The query set
+is 85 target strings (7 phases, 7 tools, 3 CVS criteria, 5 rephrasings each) plus 7
+negative controls. Predictions for RQ1–RQ5 are Arnav's; the RQ3 gap and gain
+predictions were revised before the commit after reading the PeskaVLP (arXiv:2410.00263)
+and TeCNO (arXiv:2003.10751) Cholec80 results, as section 5 records. At the commit no
+test video was fetched, embedded or scored; embeddings exist only for videos 1–5.
+Closes decision #1 (all-frame AP primary; per-video AP secondary; distinct videos in the
+top 50 descriptive).
+
+**Next (Week 3, ~4 days late):** rebuild the 6–40 Colab bundle on the clean hash; index
+videos 6–40 with CLIP, SigLIP and MedSigLIP on a GPU and PeskaVLP on the Mac; lift the
+fetch/extract/index guard for 41–80 in its own commit citing `ff2b6e5`.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
 
-1. **Near-duplicate frames at 1 fps.** Consecutive 1 fps frames from one video are
+1. ~~**Near-duplicate frames at 1 fps.**~~ **Closed 2026-10-12 by `prereg-v1`** (section 4.1:
+   all-frame AP primary, per-video AP secondary, distinct videos in the top 50
+   descriptive). Consecutive 1 fps frames from one video are
    near-identical, so the top-k of a query can be one moment repeated. Add a per-video
    diversity metric (distinct videos in the top k) or cap frames per video in the
    ranking? Either changes what AP means, so **decide before pre-registration (Week 2)**.

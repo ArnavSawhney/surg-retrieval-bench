@@ -5,7 +5,7 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 9 Oct 2026.
+**Last updated:** 12 Oct 2026. **`prereg-v1` = `ff2b6e5`** (see `LOG.md`).
 8 Oct). Week 2 (scheduled 3–9 Oct) started 8 Oct, about a week late (see `LOG.md`).
 Test-split scoring now has its own lock (`66faa00`).
 **Status:** metrics tie-neutral, overlap guard in place, CLIP + SigLIP in the registry.
@@ -310,8 +310,8 @@ manifest passes `tests/test_manifest.py`); #4 Week 2 overload. Closed: #5 ties.
 
 ## 6. Manual actions still outstanding for Arnav
 
-* **RQ1–RQ5 predictions** (numbers + falsifiers) for `docs/preregistration.md`: the
-  only thing blocking `prereg-v1`, which blocks fetching videos 41–80.
+* ~~RQ1–RQ5 predictions~~ done 12 Oct; `prereg-v1` = `ff2b6e5`. Fetching 41–80 can
+  now be unlocked (in its own commit citing the hash).
 * **Colab bundle 6–40** (optional, stretch indexing): don't upload the current tar; it
   records a `-dirty` git hash (the pre-registration was uncommitted). It is rebuilt
   right after the `prereg-v1` commit, then goes to `MyDrive/srb/` of the Colab account,
