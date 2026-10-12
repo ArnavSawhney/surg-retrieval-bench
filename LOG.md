@@ -82,6 +82,15 @@ top 50 descriptive).
 videos 6–40 with CLIP, SigLIP and MedSigLIP on a GPU and PeskaVLP on the Mac; lift the
 fetch/extract/index guard for 41–80 in its own commit citing `ff2b6e5`.
 
+### 2026-10-12 — Week 3, Task 0: `prereg-v1` on GitHub
+
+Pushed `main` and `prereg-v1`. On GitHub the annotated tag (object `3be99b5`) peels to
+`ff2b6e5`. Timestamps from the GitHub API: tagger date 2026-10-12T13:58:57Z (set by the
+client); the push that carried `ff2b6e5` and the tag was received at
+**2026-10-12T14:02:13Z** (repository activity API). `pytest`: 516 passed, none skipped,
+including `test_no_query_is_truncated_by_any_text_encoder` for all four tokenizers (its
+first run; no query exceeds any limit, so no deviation). Private-file check empty.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
