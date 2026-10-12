@@ -5,14 +5,14 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 12 Oct 2026. **`prereg-v1` = `ff2b6e5`** (see `LOG.md`).
-8 Oct). Week 2 (scheduled 3–9 Oct) started 8 Oct, about a week late (see `LOG.md`).
-Test-split scoring now has its own lock (`66faa00`).
-**Status:** metrics tie-neutral, overlap guard in place, CLIP + SigLIP in the registry.
-Videos 1–5 fetched, extracted (14,266 frames) and indexed with **both** CLIP and SigLIP
-(built on a Colab T4; see §1a); dev eval run on both. **No result produced.**
-`results/results.csv` must stay empty until `docs/preregistration.md` is written; dev
-numbers go to `results/dev/` (gitignored).
+**Last updated:** 12 Oct 2026 (Week 3, day 1). **`prereg-v1` = `ff2b6e5`**, on GitHub
+since 2026-10-12T14:02:13Z. About 4 days behind plan (see `LOG.md`).
+**Status:** the protocol is frozen. Frames for videos 1–40 (86,304); 1–40 indexes for
+CLIP (L4, float16) and PeskaVLP (Mac, merged 1–5 + 6–40); SigLIP and MedSigLIP 1–40
+building on a Jarvis L4 (§1b). The 41–80 fetch guard is lifted (`b09781b`); the
+**scoring lock is still on** (lifted only in Task 5, after Arnav says go). The
+registered evaluation (`scripts/eval_registered.py`) is committed (`60a352f`).
+`results/results.csv` stays empty until Task 5. **No result produced.**
 
 Start a new session by reading the local, git-excluded planning notes (see `.git/info/exclude`)
 — they are the source of truth for scope and hard rules, and they are private: never
@@ -184,6 +184,47 @@ skipped on a re-run. To resume, re-run the same command **with the same
 
 ---
 
+## 1b. Week 3 (12 Oct 2026)
+
+| Task | State | Commit / evidence |
+|---|---|---|
+| 0. Push + verify | done | `prereg-v1` tag object `3be99b5` peels to `ff2b6e5` on GitHub; push received 2026-10-12T14:02:13Z; `pytest` 516 passed, none skipped, truncation test passes for all 4 tokenizers |
+| 1. Bundles on a clean hash | done | `srb_bundle_videos_1-5.tar` (1.0 GB) and `_6-40.tar` (4.6 GB) at `db5ed24`; SHA-256 in `data/colab/SHA256SUMS`; old `srb_bundle.tar` deleted (Arnav approved) |
+| 2. Index 1–40 | CLIP, PeskaVLP done; SigLIP, MedSigLIP running | see below |
+| 3. 41–80 | guard lifted (`b09781b`), fetch running | `data/fetch_extract_41-80.log` |
+| 4. Registered evaluation | code done (`60a352f`; parallel models `369ce40`); val run waits for all four 1–40 indexes | `tests/test_resample.py`, `tests/test_evaluation.py` |
+
+**Index ranges.** An index is one folder per exact video range, and `eval_retrieval.py`
+/ `eval_registered.py` load one folder. `scripts/merge_index.py` (`6fde54d`) joins
+consecutive ranges into one (PeskaVLP: `videos_1-5` + `videos_6-40` → `videos_1-40`,
+86,304 × 768); it refuses unless the parts share model, revision and dim and tile the
+manifest row for row, so the merged index has the same hash as a direct build. CLIP,
+SigLIP and MedSigLIP were instead **rebuilt over 1–40 in one go** on the L4, so each
+of their indexes has one compute dtype.
+
+**GPU: Jarvis Labs L4 (24 GB), on-demand ₹41.31/hr**, instance 535612, created
+2026-10-12T14:11Z. Bundles uploaded from the Mac over ssh (~4 MB/s; both rsyncs died
+at 14:20 with an ssh timeout and 6–40 was resumed by appending the missing bytes; both
+verified by SHA-256). Python 3.11 venv with the exact pins, weights pre-downloaded at
+the pinned revisions. Procedure: `scripts/gpu_index.sh`.
+
+Throughput on the L4 (256-frame bench, then the full run):
+
+| model | float32 | float16 | float16 vs float32, same 512 frames |
+|---|---|---|---|
+| CLIP ViT-L/14 | 36.6 frames/s | 97.7 (full 1–40 run: **101.75**) | min cosine 0.99994 |
+| SigLIP so400m-384 | 10.3–11.0 | 34.3 | 0.99982 |
+| MedSigLIP-448 | 7.3–7.8 | 26.5 | 0.99997 |
+
+float32 on the L4 was only 2.3× the T4, below the 3× bar agreed before the paid run,
+so Arnav chose **float16** (12 Oct). The prereg pins revisions, not the encoder compute
+dtype, so this is not a deviation; `meta.json` records `compute_dtype`. Checks:
+CLIP video04 L4 float16 vs Mac float32, min cosine **0.99977** (bar 0.999); CLIP
+videos 1–5, new L4 float16 vs old T4 float32 index, min cosine 0.99977, mean 0.999994.
+The old float32 `videos_1-5` indexes of CLIP and SigLIP stay on disk but are not used.
+
+PeskaVLP 6–40 on the Mac (MPS, float32): 72,038 frames at 34.0 frames/s (2,125 s).
+
 ## 2. Environment (reproduce this exactly)
 
 * **Python 3.11.15** from `/opt/homebrew/bin/python3.11`. Venv at `.venv`.
@@ -276,54 +317,53 @@ skipped on a re-run. To resume, re-run the same command **with the same
     local snapshot path, and the ResNet is built with `pretrained="random"` (every
     weight comes from the checkpoint; this avoids an unpinned torchvision download).
 
+14. **macOS rsync is openrsync**: it rejects `--info=progress2` (exit 1, nothing sent).
+    Long ssh uploads to the Jarvis instance can drop with "Operation timed out"; use
+    `-o ServerAliveInterval=15` and resume with `tail -c +$((REMOTE_SIZE+1)) file | ssh
+    host 'cat >> file'`, then compare SHA-256 on both ends.
+15. **The L4 is slow in float32** for the 400M-parameter SigLIP towers (2.3× a T4);
+    float16 is 3.3–3.6× faster at min cosine ≥ 0.9998 (§1b). Batch size barely matters
+    on either GPU.
+
 ---
 
 ## 4. Next up
 
-Week 1 is done (§1a). **Week 2, in priority order** (pre-registration beats model count;
-if time runs out, cut models, never the pre-registration):
+Week 3, in order (scope as in the local planning notes). The pre-registration is frozen: any change of
+protocol is appended under "Deviations" and shown to Arnav before it is committed.
 
-1. **Pre-registration** (`docs/preregistration.md`): Arnav decides open decision #1
-   (near-duplicate frames), the RQ1 headline per query, the uncertainty method and the
-   RQ5 sampling procedure; queries drafted from label definitions and the literature
-   and shown to Arnav before committing; predictions are Arnav's own. Then commit,
-   `git tag prereg-v1`, push, and record the hash in `LOG.md`.
-2. **MedSigLIP-448** in the registry (gated: HAI-DEF terms + `HF_TOKEN`), smoke test on
-   MPS with tiny batches.
-3. **Full Cholec80 extraction:** videos 6–40 now (measure the CAMMA server speed
-   first); videos 41–80 only after `prereg-v1` is on GitHub, with the fetch/extract/
-   index guard lifted in its own commit citing the hash.
-4. ~~**PeskaVLP**~~ **done 9 Oct** (LOG.md): separate `.venv-surgvlp`, smoke and dev
-   check on 1–5 pass. Videos 6–40 are extracted (86,304 frames for 1–40), and the
-   Colab bundle `data/colab/srb_bundle_videos_6-40.tar` (4.6 GB) is built.
+1. Finish Task 2: download SigLIP and MedSigLIP `videos_1-40` from the L4 (check
+   SHA-256), untar, confirm `build_index.py` reports them cached, then **`jl destroy
+   535612`** and record the spend.
+2. Task 4 validation run: `python scripts/eval_registered.py --split val` (all four
+   models, B = 10,000, ~10 min per model in parallel) → `results/dev/registered_val_*`.
+   Report runtime and anything broken; change nothing in the protocol because of it.
+3. Task 3: `fetch_extract.sh 41 80 32` is running (started 2026-10-12 20:17 IST); per
+   video check CRC, frames = labels, `video_minus_phase_rows = 0`, source size; then
+   `tests/test_manifest.py` on 1–80, `make_colab_bundle.sh 41-80`, PeskaVLP 41–80 on the
+   Mac, and the three GPU models on an L4 with `scripts/gpu_index.sh /home 41-80 …`
+   (~₹85 at the 1–40 rates).
+4. Task 5 only after Arnav says go: lift `TEST_SCORING_UNLOCKED` in its own commit
+   citing `ff2b6e5`, run `eval_registered.py --split test` once, write
+   `results/results.csv`.
 
-**Test scoring stays locked all of Week 2.** `srb.retrieval.TEST_SCORING_UNLOCKED` is
-`False`; `evaluate()` and `eval_retrieval.py` refuse any Cholec80 video in 41–80. This
-lock is separate from the fetch/extract/index guard and is lifted only in Week 3.
+**Test scoring stays locked** until Task 5. `srb.retrieval.TEST_SCORING_UNLOCKED` is
+`False`; `evaluate()`, `evaluate_model()` and `eval_retrieval.py` refuse any Cholec80
+video in 41–80. The fetch/extract/index guard is gone (`b09781b`).
 
 ## 5. Open decisions and parked work
 
-Both lists live in `LOG.md` and are the single source of truth. Open: #1
-near-duplicate 1 fps frames; #2 per-backbone pretraining contamination (dataset
-overlap half is closed); #3 label alignment (code + tests done; the video04 manifest passes `tests/test_manifest.py`, closes once the 5-video
-manifest passes `tests/test_manifest.py`); #4 Week 2 overload. Closed: #5 ties.
+Both lists live in `LOG.md` and are the single source of truth. Open: #2 per-backbone
+pretraining contamination (dataset overlap half is closed); #4 overload (pre-registration
+done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 
 ## 6. Manual actions still outstanding for Arnav
 
-* ~~RQ1–RQ5 predictions~~ done 12 Oct; `prereg-v1` = `ff2b6e5`. Fetching 41–80 can
-  now be unlocked (in its own commit citing the hash).
-* **Colab bundle 6–40** (optional, stretch indexing): don't upload the current tar; it
-  records a `-dirty` git hash (the pre-registration was uncommitted). It is rebuilt
-  right after the `prereg-v1` commit, then goes to `MyDrive/srb/` of the Colab account,
-  after deleting the older `srb_bundle.tar` there if present.
-* **Before the MedSigLIP Colab run:** sign in to Colab with the Google account that
-  holds the bundle (~30 GB free), and add `HF_TOKEN` to *that* account's Colab Secrets
-  (key icon, notebook access on). See the header of `scripts/colab_index.sh`.
-* Colab bundles go to Drive one chunk at a time (`make_colab_bundle.sh 6-40`, later
-  `41-80`): delete the previous bundle from `MyDrive/srb/` before uploading the next.
-* Close VS Code and Chrome before indexing, and start Claude Code from Terminal.app
-  (trap 11).
+* **Say go for Task 5** (test scoring) once the validation run and the 41–80 indexes
+  are in.
+* The 41–80 indexes need one more L4 session (~₹85 at the 1–40 rates); GPU spend so
+  far is in §1b.
+* Close VS Code and Chrome before any Mac indexing (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
-  A full local Endoscapes copy is needed by Week 8; the full Cholec80 zip does not
-  fit on this Mac and is not needed (videos are fetched individually).
+  Endoscapes waits until Week 8 (decided 12 Oct).
 * Optional: add a description and topics to the GitHub repo; it was created bare.
