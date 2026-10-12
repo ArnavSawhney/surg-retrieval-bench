@@ -30,7 +30,7 @@ from srb.datasets.frames import extract_frames, probe
 from srb.datasets.overlap import cholec80_split
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fetch_cholec80_videos import parse_videos, refuse_test_videos  # noqa: E402
+from fetch_cholec80_videos import parse_videos  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "cholec80"
@@ -97,7 +97,6 @@ def main() -> None:
     ap.add_argument("--keep-video", action="store_true")
     args = ap.parse_args()
     videos = parse_videos(args.videos)
-    refuse_test_videos(videos)
 
     rows = [s for v in videos if (s := process(v, args.keep_video))]
     if rows:

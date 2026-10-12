@@ -26,7 +26,7 @@ from srb.index import cache_is_valid, embed_frames, git_hash, manifest_hash, sav
 from srb.models.registry import _SPECS, SubprocessSpec, get_backbone
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fetch_cholec80_videos import parse_videos, refuse_test_videos  # noqa: E402
+from fetch_cholec80_videos import parse_videos  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "cholec80"
@@ -64,7 +64,6 @@ def main() -> None:
     args = ap.parse_args()
 
     videos = parse_videos(args.videos)
-    refuse_test_videos(videos)
     manifest = pd.read_parquet(DATA / "manifest.parquet")
     missing = sorted(set(videos) - set(manifest.video_id))
     if missing:

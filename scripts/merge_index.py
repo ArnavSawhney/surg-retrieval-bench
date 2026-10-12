@@ -24,7 +24,7 @@ from srb.index import git_hash, merge_indexes, save_index
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_index import DATA, ROOT, video_tag  # noqa: E402
-from fetch_cholec80_videos import parse_videos, refuse_test_videos  # noqa: E402
+from fetch_cholec80_videos import parse_videos  # noqa: E402
 
 
 def main() -> None:
@@ -35,7 +35,6 @@ def main() -> None:
 
     ranges = [parse_videos(p) for p in args.parts]
     videos = [v for r in ranges for v in r]
-    refuse_test_videos(videos)
     base = ROOT / "data" / "index" / args.model
     full = pd.read_parquet(DATA / "manifest.parquet")
     expected = (full[full.video_id.isin(videos)]

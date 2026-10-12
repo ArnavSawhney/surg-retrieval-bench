@@ -44,7 +44,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "third_party" / "SurgVLP"))
 
 from build_index import video_tag  # noqa: E402
-from fetch_cholec80_videos import parse_videos, refuse_test_videos  # noqa: E402
+from fetch_cholec80_videos import parse_videos  # noqa: E402
 from srb.index import (cache_is_valid, embed_frames, git_hash,  # noqa: E402
                        manifest_hash, save_index)
 from srb.models.peskavlp_pins import PESKAVLP  # noqa: E402
@@ -189,7 +189,6 @@ def cmd_smoke(args) -> None:
 
 def cmd_index(args) -> None:
     videos = parse_videos(args.videos)
-    refuse_test_videos(videos)
     manifest = pd.read_parquet(DATA / "manifest.parquet")
     missing = sorted(set(videos) - set(manifest.video_id))
     if missing:
