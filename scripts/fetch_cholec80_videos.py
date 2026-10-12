@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 """Fetch selected Cholec80 videos from the zip (local path or official URL) into data/tmp/.
 
+Also fetches each video's phase, tool and timestamp files into data/cholec80/raw/ if
+missing (CRC-checked like the videos).
+
 Resumable (curl range segments), CRC-32 verified against the zip's central directory,
 and checks free disk before each video. ``extract_frames.py`` consumes the files and
 deletes each video after its frames are written.
@@ -23,6 +26,7 @@ from srb.datasets.zipsource import fetch_member, open_zip, resolve_zip
 
 ROOT = Path(__file__).resolve().parents[1]
 TMP = ROOT / "data" / "tmp"
+RAW = ROOT / "data" / "cholec80" / "raw"  # label files, as laid out in the zip
 MARGIN = 2 << 30  # keep 2 GiB free beyond what this video needs
 
 
@@ -44,6 +48,16 @@ def main() -> None:
     src = resolve_zip("cholec80")
     zf = open_zip(src)
     TMP.mkdir(parents=True, exist_ok=True)
+    for v in videos:  # label files first: small, and extract_frames.py needs them
+        for name in (f"phase_annotations/video{v:02d}-phase.txt",
+                     f"tool_annotations/video{v:02d}-tool.txt",
+                     f"videos/video{v:02d}-timestamp.txt"):
+            dest = RAW / name
+            if dest.exists() and dest.stat().st_size == zf.getinfo(name).file_size:
+                continue
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            stats = fetch_member(src, zf, name, dest, connections=1, workdir=TMP)
+            print(f"{name}: OK {json.dumps(stats)}", flush=True)
     names = sorted((f"videos/video{v:02d}.mp4" for v in videos),
                    key=lambda n: zf.getinfo(n).compress_size)  # smallest first
     for name in names:
