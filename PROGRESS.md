@@ -5,13 +5,13 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 13 Oct 2026 (Week 4, started early; scheduled 17–23 Oct).
+**Last updated:** 13 Oct 2026 (Week 5: RQ4, pulled forward from plan Weeks 6–7).
 **`prereg-v1` = `ff2b6e5`**, on GitHub since 2026-10-12T14:02:13Z.
-**Status:** RQ1/RQ2 registered test run done once (`c1ed8ed`, run at `1759cb4`);
-compared with the predictions in `docs/results_vs_predictions.md`. Week 4 done: RQ2
-figures, RQ3 linear probe run once on 41–80 (`6918ba5`, run at `d57bac8`) and compared with
-the predictions (RQ3a, RQ3b hold; RQ3c falsified), RQ5 frame pool drawn and hashed (no tagging yet). Two
-Deviations committed. No GPU spend this week.
+**Status:** RQ1/RQ2 (`c1ed8ed`) and RQ3 (`6918ba5`) run once on the test split and compared
+with the predictions in `docs/results_vs_predictions.md`. Week 5: section 4.4 clarified
+under Deviations (`eebebfe`), temporal models implemented (`c423454`), **validation run
+done (dev)**; the RQ4 test run waits for Arnav's go. RQ5 tagging tool built (`c75e985`);
+no pool frame tagged. No GPU spend since Week 3.
 
 Start a new session by reading the local, git-excluded planning notes (see `.git/info/exclude`)
 — they are the source of truth for scope and hard rules, and they are private: never
@@ -366,31 +366,28 @@ L4 total for Week 3: **₹230.07** over two sessions. Remote run log:
 
 ## 4. Next up
 
-Week 4 is done (LOG.md, 13 Oct):
+Week 5 (LOG.md, 13 Oct):
 
-0. **Done**: `docs/results_vs_predictions.md` (RQ1–RQ3; RQ4–RQ5 pending) (`03df79d`);
-   Deviations: float16 clarification (`0365b2d`), tool-head C-grid sensitivity, not
-   registered (`d57bac8`).
-1. **Done** (`2c94d07`): RQ2 figures and table in `figures/`, from `results/test/` only.
-2. **Done** (`0f78684`, `7077afb`, `fa89df2`): `src/srb/probe.py`,
-   `scripts/eval_probe.py`, `scripts/select_probe_sensitivity.py`, tests.
-3. **Done, dev**: probe validation `results/dev/probe_val_20261013-105258`; extended
-   grid `results/dev/probe_sensitivity_val_20261013-185659`. Probes in
-   `data/probe/<model>/` (`probe.npz`, `probe_tools_sensitivity.npz`).
-4. **Done, RESULT** (`6918ba5`): probe test run, once. `results/test/probe_*.csv`,
-   `setting=linear-probe` and `linear-probe-sensitivity-not-registered` rows in
-   `results.csv`; posteriors of 41–80 in `data/probe/<model>/`. Compared with the RQ3
-   predictions at Arnav's request (`docs/results_vs_predictions.md`); only the primary
-   analysis enters a verdict.
-5. **Done** (`0c16ca7` + pool commit): `docs/rq5_frame_pool.csv`, SHA-256 in LOG.md.
-   Tagging (and its UI) is Week 8; tag in `tag_order`, image only.
-
-Next (Week 5, its own prompt): RQ4 temporal models (section 4.4) use the saved
-phase posteriors.
+1. **Done** (`eebebfe`): Deviations, clarification of section 4.4 (no protocol change),
+   committed before any RQ4 number.
+2. **Done** (`c423454`): `src/srb/temporal.py`, `scripts/eval_temporal.py`,
+   `tests/test_temporal.py`, `tests/test_eval_temporal.py`.
+3. **Done, dev**: `results/dev/temporal_val_20261013-203339` (run at `c423454`).
+   Selection (windows, HMM, TCN weights per seed) in `data/temporal/<model>/`; the test
+   run only loads it. 54 min wall with `--jobs 2 --threads 2`; per-(seed, depth) TCN
+   training took 45–1,320 s (the long ones all in the second model pair; cause not
+   established; weights are deterministic, so it does not affect the numbers).
+4. **Waiting for Arnav's go**: `eval_temporal.py --split test`, once, clean tree; appends
+   `single-frame`, `ma-causal`, `ma-centred`, `hmm-forward`, `hmm-viterbi`, `tcn-causal`
+   rows (TCN `seed` = 0, 1, 2 and `mean(0,1,2)`; other rows the bootstrap seed).
+5. **Done** (`c75e985`): RQ5 tagging tool `scripts/tag_rq5.py` (image only, pool order,
+   saves every frame). Arnav does the pool tagging:
+   `.venv/bin/python scripts/tag_rq5.py` → http://127.0.0.1:8765; tags go to
+   `data/rq5/tags.csv`.
 
 Rules that still bind: the pre-registration is frozen (changes only under `## Deviations`,
 shown to Arnav first); **no rerun of the RQ1/RQ2 test split**; no verdicts on RQ3–RQ5
-until Arnav asks; the optional image-only encoder can only be exploratory now (LOG.md,
+until Arnav asks (RQ4 included); the optional image-only encoder can only be exploratory now (LOG.md,
 Parked).
 
 **Test scoring is unlocked** (`1759cb4`, after `ff2b6e5`): `evaluate()` and
@@ -407,7 +404,8 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 ## 6. Manual actions still outstanding for Arnav
 
 * GPU spend so far is in §1b (two L4 sessions, Week 3, ₹230.07); no instance is running,
-  and none is needed in Week 4.
+  and none is needed in Weeks 4–5.
+* Say go (or not) for the RQ4 test run; tag the RQ5 pool with `scripts/tag_rq5.py`.
 * Close VS Code and Chrome before any Mac indexing (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
   Endoscapes waits until Week 8 (decided 12 Oct).

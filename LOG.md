@@ -227,6 +227,29 @@ zero-shot tables, saved test posteriors vs labels; all agree): **RQ3a holds**
 (spread shrinks 0.2145 → 0.0678, but PeskaVLP has the lowest probe accuracy). The C-grid
 sensitivity analysis is in no verdict. Week 4 done; Week 5 gets its own prompt.
 
+### 2026-10-13 — Week 5 (RQ4, pulled forward from plan Weeks 6–7), Tasks 1–3 and 5
+
+**Task 1** (`eebebfe`): clarification of section 4.4 under Deviations, Arnav's answers,
+committed before any RQ4 number on any split (MA window ends, HMM prior/floor/forward
+pass, TCN architecture, per-seed (depth, epoch) selection, CPU determinism, edit score,
+Jaccard, intervals). No protocol change.
+**Task 2** (`c423454`): `src/srb/temporal.py`, `scripts/eval_temporal.py`, 27 tests
+(hand-checked 3-state HMM, causality incl. the TCN receptive field, edit/Jaccard hand
+cases, leakage guards, end-to-end run on a synthetic root). 807 tests pass.
+**Task 3, dev, not a result** (`results/dev/temporal_val_20261013-203339`, clean tree at
+`c423454`): single frame reproduces the probe's validation accuracy
+exactly for all four models; HMM floored 0 posteriors. Chosen w (causal / centred):
+CLIP 30 / 60, SigLIP 20 / 30, MedSigLIP 20 / 60, PeskaVLP 30 / 60 s. TCN (depth, epoch)
+per seed 0/1/2: CLIP (3,48) (4,49) (4,43); SigLIP (4,50) (4,50) (3,42); MedSigLIP
+(4,46) (4,46) (4,45); PeskaVLP (4,44) (4,36) (4,30); 10 of 12 at the largest depth, 2
+at the last epoch. Validation accuracy gain over single frame, mean over backbones:
+MA causal +0.085, HMM forward +0.044, TCN +0.034 (MA centred +0.124, Viterbi +0.060).
+54 min wall (two models at a time, 2 threads each), peak RSS ≤ 0.87 GB; a retrained
+TCN (CLIP, seed 0) is bit-identical to the saved one. Test run waits for Arnav.
+**Task 5** (`c75e985`): `scripts/tag_rq5.py`, a local image-only tagging page in pool
+order with per-frame saving and stopping-rule progress; shown on 5 training-video frames
+(`--demo`). No pool frame tagged.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
@@ -270,7 +293,6 @@ Outside Session 1's scope. Not started.
 * `scripts/extract_frames.py`, `scripts/build_index.py`, `scripts/eval_retrieval.py`,
   `scripts/eval_probe.py`, `scripts/eval_temporal.py` — Week 1 onwards.
 * `src/srb/datasets/cholec80.py`, `src/srb/datasets/endoscapes.py` — Week 1.
-* `src/srb/temporal.py` (moving average, HMM, causal TCN) — Weeks 6–7.
 * Classification, probe and temporal metrics (accuracy, macro-F1, tool mAP, Jaccard,
   edit score) — added to `metrics.py` when the experiments that need them arrive.
 * Per-experiment YAMLs in `configs/` — when there is an experiment to configure.
