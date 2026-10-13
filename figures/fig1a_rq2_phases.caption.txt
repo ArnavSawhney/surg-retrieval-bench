@@ -1,0 +1,1 @@
+RESULT, Cholec80 test 41-80. Prompt sensitivity, Cholec80 phase queries: AP of each of the five rephrasings (r1-r5) per phase target and model; the line joins a model's lowest and highest rephrasing; dashed tick = the target's prevalence (AP of a random ranking). Source: results/test/ from the registered run at git 1759cb4 (2026-10-13).

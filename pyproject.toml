@@ -31,6 +31,8 @@ dependencies = [
   # SigLIP's tokenizer is SentencePiece-based and needs protobuf to load.
   "sentencepiece==0.2.2",
   "protobuf==7.36.2",
+  # Paper figures (scripts/make_rq2_figures.py).
+  "matplotlib==3.11.2",
 ]
 
 [project.optional-dependencies]

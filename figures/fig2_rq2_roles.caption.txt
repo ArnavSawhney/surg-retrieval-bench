@@ -1,0 +1,1 @@
+RESULT, Cholec80 test 41-80. Prompt sensitivity by rephrasing role: mean AP over the 14 Cholec80 phase and tool targets for each role (r1 technical, r2 action, r3 visible, r4 lay, r5 label-like), per model; bars = 95% paired video-level bootstrap intervals (descriptive, B = 2,000). Source: results/test/ from the registered run at git 1759cb4 (2026-10-13).
