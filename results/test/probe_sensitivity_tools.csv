@@ -1,0 +1,13 @@
+label,model,metric,value,ci_low,ci_high,n_boot
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",clip-vit-l14,tool_map_primary,0.6750302199527917,0.6479044674327035,0.7029139032571455,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",clip-vit-l14,tool_map_sensitivity,0.6777895512299821,0.6507490965780574,0.7054781960864176,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",clip-vit-l14,sensitivity_minus_primary,0.0027593312771904133,-0.0010902608227146087,0.00687227104354399,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",siglip-so400m-384,tool_map_primary,0.7572059257587614,0.7354890455040162,0.7799013915408619,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",siglip-so400m-384,tool_map_sensitivity,0.7739085620604917,0.7541812116032623,0.7943236215352978,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",siglip-so400m-384,sensitivity_minus_primary,0.0167026363017303,0.010406973274629826,0.02386643108001759,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",medsiglip-448,tool_map_primary,0.741826339794094,0.7146325061981643,0.7699399864385034,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",medsiglip-448,tool_map_sensitivity,0.7486294093782905,0.7234605844573611,0.7757680397718917,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",medsiglip-448,sensitivity_minus_primary,0.006803069584196519,0.0030627222367605902,0.011145154043085498,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",peskavlp,tool_map_primary,0.6572933588476976,0.6328430608113557,0.6839770153006591,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",peskavlp,tool_map_sensitivity,0.6572933588476976,0.6328430608113557,0.6839770153006591,2000
+"RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED (tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)",peskavlp,sensitivity_minus_primary,0.0,0.0,0.0,2000

@@ -1,0 +1,63 @@
+{
+  "label": "RESULT, Cholec80 test videos 41-80",
+  "split": "test",
+  "models": [
+    "clip-vit-l14",
+    "siglip-so400m-384",
+    "medsiglip-448",
+    "peskavlp"
+  ],
+  "boot": 2000,
+  "seed": 20261011,
+  "git_hash": "d57bac8dc017930283063184594cee38bb18c7a8",
+  "date": "2026-10-13T19:05:36",
+  "wall_s": 320.3,
+  "jobs": 2,
+  "C_grid": [
+    0.001,
+    0.01,
+    0.1,
+    1.0,
+    10.0,
+    100.0
+  ],
+  "max_iter": 5000,
+  "per_model": {
+    "clip-vit-l14": {
+      "index_git_hash": "4aed6bacb72425072bfd0691c97f2157855550e2",
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "probe_git_hash": "7077afb2e8934fd174c1b093a91715ec745884f7",
+      "posteriors": "data/probe/clip-vit-l14/posteriors_videos_41-80.npz",
+      "sensitivity_probe_git_hash": "fa89df2080e2cdf6f1efd65bf898f7442f001183",
+      "seconds": 166.2,
+      "peak_rss_mb": 837.6
+    },
+    "siglip-so400m-384": {
+      "index_git_hash": "4aed6bacb72425072bfd0691c97f2157855550e2",
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "probe_git_hash": "7077afb2e8934fd174c1b093a91715ec745884f7",
+      "posteriors": "data/probe/siglip-so400m-384/posteriors_videos_41-80.npz",
+      "sensitivity_probe_git_hash": "fa89df2080e2cdf6f1efd65bf898f7442f001183",
+      "seconds": 165.5,
+      "peak_rss_mb": 1224.5
+    },
+    "medsiglip-448": {
+      "index_git_hash": "4aed6bacb72425072bfd0691c97f2157855550e2",
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "probe_git_hash": "7077afb2e8934fd174c1b093a91715ec745884f7",
+      "posteriors": "data/probe/medsiglip-448/posteriors_videos_41-80.npz",
+      "sensitivity_probe_git_hash": "fa89df2080e2cdf6f1efd65bf898f7442f001183",
+      "seconds": 141.3,
+      "peak_rss_mb": 911.8
+    },
+    "peskavlp": {
+      "index_git_hash": "4aed6bacb72425072bfd0691c97f2157855550e2",
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "probe_git_hash": "7077afb2e8934fd174c1b093a91715ec745884f7",
+      "posteriors": "data/probe/peskavlp/posteriors_videos_41-80.npz",
+      "sensitivity_probe_git_hash": "fa89df2080e2cdf6f1efd65bf898f7442f001183",
+      "seconds": 138.5,
+      "peak_rss_mb": 707.1
+    }
+  }
+}
