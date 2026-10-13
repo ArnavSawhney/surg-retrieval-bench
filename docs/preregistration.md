@@ -559,3 +559,54 @@ video. The extended-grid selection on 33–40 was run before this entry was comm
 unchanged, and only the primary analysis is compared with the RQ3 predictions. The
 sensitivity numbers are added rows (`setting = linear-probe-sensitivity-not-registered`)
 and files (`results/test/probe_sensitivity_*.csv`).
+
+### 2026-10-13 — clarification of section 4.4 (no protocol change)
+
+Section 4.4 leaves some implementation choices open. They are fixed here, before any
+RQ4 number exists on any split: no temporal model had been fitted, selected or scored on
+videos 33–40 or 41–80 when this entry was written. The inputs are the phase posteriors
+of the selected probes (4.3) exactly as saved, and the probes are not refitted.
+
+* **Moving average.** At the start of a video the trailing window is shortened to the
+  frames available (the mean over frames max(0, t−w+1) … t). The centred window
+  (secondary) covers frames t−⌊w/2⌋ … t+⌈w/2⌉−1, which is exactly w frames, shortened the
+  same way at both ends of the video. Ties in the choice of w go to the smaller w.
+* **HMM.** The class prior is the share of each phase among the 1 fps frames of videos
+  1–32 (the probe's training frames). Posteriors are floored at 10⁻¹² before they are
+  divided by the prior; the number of floored values is reported (none on videos 1–40).
+  Forward filtering: α₀ ∝ π ⊙ e₀, then αₜ ∝ (αₜ₋₁ A) ⊙ eₜ, normalised at every step;
+  the prediction at t is argmax αₜ. Viterbi uses the same π, A and emissions, in log
+  space. Add-one smoothing applies to every cell of A (counts of consecutive 1 fps
+  phase pairs within each video of 1–32) and to every entry of π (counts of each video's
+  first phase).
+* **Causal TCN.** Layer 1 is a causal convolution from the embedding dimension to 64
+  channels (kernel 3, dilation 1); layers 2…D map 64 to 64 with dilations 2, 4, 8; each
+  convolution is followed by a ReLU; a 1×1 convolution maps 64 channels to the 7 phases.
+  Causality comes from left-only zero padding of (k−1)·d frames per layer. There is no
+  normalisation, dropout or residual connection, and PyTorch's default initialisation is
+  used. Receptive field: 7, 15 and 31 frames (seconds) for D = 2, 3, 4. The input is the
+  frozen embeddings as stored in the index, upcast to float32, with no further
+  normalisation (as in 4.3). The loss is the unweighted mean cross-entropy over the
+  frames of one video; the order of the 32 training videos is reshuffled every epoch by a
+  generator seeded with the run's seed.
+* **TCN selection.** Each seed (0, 1, 2) is a full replicate: for every depth all 50
+  epochs are trained (no early stopping), and the (depth, epoch) pair with the best
+  macro-F1 on videos 33–40 is selected jointly, so the depth can differ between seeds.
+  Ties go to the smaller depth, then the earlier epoch. Training runs on the CPU with
+  `torch.use_deterministic_algorithms(True)` and fixed seeds.
+* **Edit score and Jaccard.** No segment is filtered: short segments in the predictions
+  are kept as they are. The edit score of a video is 100 × (1 − Levenshtein distance
+  between the predicted and true segment label sequences / the longer of the two
+  sequence lengths) (Lea et al., 2016). Jaccard follows 4.4 literally: for each video
+  and each phase in its ground truth, |P ∩ G| / |P ∪ G| over frames, averaged over those
+  videos, then over the 7 phases; a phase predicted in a video where it does not occur
+  adds no term for that phase.
+* **Intervals (4.6).** On each of the first 2,000 resamples of `default_rng(20261011)`:
+  accuracy and macro-F1 from multiplicity-weighted confusion counts; Jaccard and edit
+  score as multiplicity-weighted means of the per-video values (for Jaccard, each phase
+  over the resampled videos in which it occurs). The TCN headline on each resample is the
+  mean over the three seeds; its interval is the interval of that mean, and the ± is the
+  SD (ddof = 1) over seeds on the full set. The gain over single frame is the paired
+  difference on the same resamples, reported for all four metrics. All descriptive.
+
+**Affects.** No registered choice changes; these fix details that 4.4 leaves open.
