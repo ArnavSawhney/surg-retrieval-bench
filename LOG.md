@@ -190,6 +190,34 @@ tool mAP: CLIP 0.698 / 0.592 / 0.675, SigLIP 0.800 / 0.690 / 0.788, MedSigLIP
 time, peak RSS 0.69–0.88 GB per model. Weights bit-identical on a rerun. Probes and
 phase posteriors of 1–40 in `data/probe/` (1–32 in-sample). Test run waits for Arnav.
 
+### 2026-10-13 — Week 4, Task 4: RQ3 linear probe on 41–80 (RESULT, run once)
+
+Deviations committed after Arnav's OK: float16 clarification (`0365b2d`) and a
+secondary, **not registered** tool-head C-grid sensitivity analysis (`d57bac8`; grid
+plus {1e3, 1e4}; code `fa89df2`). Extended-grid selection on 33–40 (dev,
+`results/dev/probe_sensitivity_val_20261013-185659`) reproduced every registered fit
+exactly; 6 of 28 tool heads changed C (2 of the 13 at C = 100). The test code path was
+dry-run on 33–40 in a scratch root first. Pushed `c1ed8ed..d57bac8`.
+Test run (`6918ba5`; clean tree at `d57bac8`, once; 320 s, peak RSS 0.71–1.22 GB per
+model): `results/test/probe_*.csv`, 48 rows appended to `results.csv` (40
+`linear-probe`, 8 `linear-probe-sensitivity-not-registered`). Recomputed r1–r5 zero-shot
+accuracies equal the registered table (|Δ| ≤ 1e-12). Phase accuracy: CLIP 0.684,
+SigLIP 0.734, MedSigLIP 0.738, PeskaVLP 0.671; tool mAP 0.675 / 0.757 / 0.742 / 0.657;
+sensitivity tool mAP 0.678 / 0.774 / 0.749 / 0.657. Not compared with the predictions.
+`eval_probe.py` re-wrote `results.csv` through pandas, which re-formatted the 190
+registered rows' floats; restored byte for byte before committing, and the script now
+appends (`a34ed6d`).
+
+### 2026-10-13 — Week 4, Task 5: RQ5 frame pool drawn (before any tagging)
+
+`scripts/make_rq5_pool.py` (committed `0c16ca7`, run on a clean tree there) →
+`docs/rq5_frame_pool.csv`: 2,000 frames, 50 per test video, `default_rng(20261008)`,
+tagging order `default_rng(20261009)`, numpy 2.4.6. Source: the 98,194 test frames,
+manifest SHA-256 `885f81a0…84df0ca` (the same as all four 41–80 indexes). No labels,
+scores or predictions in the file.
+**Pool SHA-256: `0655cf3ab2ff7bc4d4149a87e976e63fd8705e03c2f8f5c52dd7ca32ec73c291`.**
+No frame has been tagged; the tagging UI is Week 8.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.

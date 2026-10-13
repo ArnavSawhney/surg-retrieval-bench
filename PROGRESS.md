@@ -8,9 +8,10 @@ traps already hit.
 **Last updated:** 13 Oct 2026 (Week 4, started early; scheduled 17–23 Oct).
 **`prereg-v1` = `ff2b6e5`**, on GitHub since 2026-10-12T14:02:13Z.
 **Status:** RQ1/RQ2 registered test run done once (`c1ed8ed`, run at `1759cb4`);
-compared with the predictions in `docs/results_vs_predictions.md`. Week 4: RQ2 figures,
-then the RQ3 linear probe (validation first; test only after Arnav says go). No GPU spend
-this week.
+compared with the predictions in `docs/results_vs_predictions.md`. Week 4 done: RQ2
+figures, RQ3 linear probe run once on 41–80 (`6918ba5`, run at `d57bac8`; not yet
+compared with the predictions), RQ5 frame pool drawn and hashed (no tagging yet). Two
+Deviations committed. No GPU spend this week.
 
 Start a new session by reading the local, git-excluded planning notes (see `.git/info/exclude`)
 — they are the source of truth for scope and hard rules, and they are private: never
@@ -357,27 +358,34 @@ L4 total for Week 3: **₹230.07** over two sessions. Remote run log:
 15. **The L4 is slow in float32** for the 400M-parameter SigLIP towers (2.3× a T4);
     float16 is 3.3–3.6× faster at min cosine ≥ 0.9998 (§1b). Batch size barely matters
     on either GPU.
+16. **Never round-trip `results/results.csv` through pandas.** `read_csv` + `to_csv`
+    re-formats floats (`0.17565920732316115` → `0.1756592073231611`) and so rewrites
+    registered rows. Append with `to_csv(mode="a", header=False)`.
 
 ---
 
 ## 4. Next up
 
-Week 4 (from the local planning notes), in order:
+Week 4 is done (LOG.md, 13 Oct):
 
-0. Housekeeping: `docs/results_vs_predictions.md` written (RQ1/RQ2; RQ3–RQ5 pending)
-   (`03df79d`). The float16 clarification for `## Deviations` is drafted and **waits for
-   Arnav's OK** before it is committed.
+0. **Done**: `docs/results_vs_predictions.md` (RQ1/RQ2; RQ3–RQ5 pending) (`03df79d`);
+   Deviations: float16 clarification (`0365b2d`), tool-head C-grid sensitivity, not
+   registered (`d57bac8`).
 1. **Done** (`2c94d07`): RQ2 figures and table in `figures/`, from `results/test/` only.
-2. **Done** (`0f78684`, `7077afb`): `src/srb/probe.py`, `scripts/eval_probe.py`,
-   `tests/test_probe.py`.
-3. **Done, dev**: probe validation 1–32 → 33–40, `results/dev/probe_val_20261013-105258`
-   (LOG.md). Selected probes in `data/probe/<model>/probe.npz` (fit at `7077afb`),
-   phase posteriors of 1–40 next to them.
-4. **Next, after Arnav says go:** `scripts/eval_probe.py --split test` on a clean tree,
-   once. It loads the selected probes (no refit), writes `results/test/probe_*.csv`,
-   appends `setting=linear-probe` rows to `results/results.csv`, saves the 41–80
-   posteriors, and refuses to run a second time.
-5. Stretch: the RQ5 frame pool (section 4.5), hashed in `LOG.md` before tagging.
+2. **Done** (`0f78684`, `7077afb`, `fa89df2`): `src/srb/probe.py`,
+   `scripts/eval_probe.py`, `scripts/select_probe_sensitivity.py`, tests.
+3. **Done, dev**: probe validation `results/dev/probe_val_20261013-105258`; extended
+   grid `results/dev/probe_sensitivity_val_20261013-185659`. Probes in
+   `data/probe/<model>/` (`probe.npz`, `probe_tools_sensitivity.npz`).
+4. **Done, RESULT** (`6918ba5`): probe test run, once. `results/test/probe_*.csv`,
+   `setting=linear-probe` and `linear-probe-sensitivity-not-registered` rows in
+   `results.csv`; posteriors of 41–80 in `data/probe/<model>/`. **Not compared with the
+   RQ3 predictions until Arnav asks**; only the primary analysis is compared.
+5. **Done** (`0c16ca7` + pool commit): `docs/rq5_frame_pool.csv`, SHA-256 in LOG.md.
+   Tagging (and its UI) is Week 8; tag in `tag_order`, image only.
+
+Next: RQ3 verdicts when Arnav asks; RQ4 temporal models (section 4.4) use the saved
+phase posteriors.
 
 Rules that still bind: the pre-registration is frozen (changes only under `## Deviations`,
 shown to Arnav first); **no rerun of the RQ1/RQ2 test split**; no verdicts on RQ3–RQ5
@@ -397,10 +405,7 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 
 ## 6. Manual actions still outstanding for Arnav
 
-* Approve (or edit) the drafted float16 clarification before it goes under
-  `## Deviations`.
-* Look at the RQ2 figures (`figures/`) and the probe validation numbers; say go for the
-  RQ3 test run.
+* Say when to compare the RQ3 test numbers with the predictions.
 * GPU spend so far is in §1b (two L4 sessions, Week 3, ₹230.07); no instance is running,
   and none is needed in Week 4.
 * Close VS Code and Chrome before any Mac indexing (trap 11).
