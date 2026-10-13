@@ -1,0 +1,166 @@
+{
+  "label": "RESULT, Cholec80 test videos 41-80",
+  "split": "test",
+  "models": [
+    "clip-vit-l14",
+    "siglip-so400m-384",
+    "medsiglip-448",
+    "peskavlp"
+  ],
+  "boot": 2000,
+  "seed": 20261011,
+  "git_hash": "3bbe61fa3d2a0f96ea694dec91cafa337eba7b9a",
+  "date": "2026-10-13T23:04:38",
+  "wall_s": 22.2,
+  "jobs": 2,
+  "threads": 2,
+  "windows": [
+    5,
+    10,
+    20,
+    30,
+    60,
+    120
+  ],
+  "depths": [
+    2,
+    3,
+    4
+  ],
+  "tcn_seeds": [
+    0,
+    1,
+    2
+  ],
+  "epochs": 50,
+  "per_model": {
+    "clip-vit-l14": {
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "threads": 2,
+      "sensitivity_selection_git_hash": "d63c5ecc7a66865cf37c34a130030da03cf65029",
+      "sensitivity_tcn": {
+        "0": {
+          "depth": 7,
+          "epoch": 54,
+          "val_macro_f1": 0.7008403420494392
+        },
+        "1": {
+          "depth": 7,
+          "epoch": 99,
+          "val_macro_f1": 0.6954811264574563
+        },
+        "2": {
+          "depth": 7,
+          "epoch": 72,
+          "val_macro_f1": 0.7047897519577705
+        }
+      },
+      "selection_git_hash": "c423454e2fa96e811865c1c7dce9dc2dc45460a7",
+      "hmm_floored": 0,
+      "single_frame_accuracy_check": 0.683931808460802,
+      "tcn_receptive_field_s": {
+        "0": 15,
+        "1": 31,
+        "2": 31
+      },
+      "seconds": 6.1,
+      "peak_rss_mb": 565.7
+    },
+    "siglip-so400m-384": {
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "threads": 2,
+      "sensitivity_selection_git_hash": "d63c5ecc7a66865cf37c34a130030da03cf65029",
+      "sensitivity_tcn": {
+        "0": {
+          "depth": 6,
+          "epoch": 82,
+          "val_macro_f1": 0.817126542120804
+        },
+        "1": {
+          "depth": 6,
+          "epoch": 90,
+          "val_macro_f1": 0.8246949133030411
+        },
+        "2": {
+          "depth": 6,
+          "epoch": 97,
+          "val_macro_f1": 0.8073793407646983
+        }
+      },
+      "selection_git_hash": "c423454e2fa96e811865c1c7dce9dc2dc45460a7",
+      "hmm_floored": 0,
+      "single_frame_accuracy_check": 0.734077438540033,
+      "tcn_receptive_field_s": {
+        "0": 31,
+        "1": 31,
+        "2": 15
+      },
+      "seconds": 6.9,
+      "peak_rss_mb": 840.2
+    },
+    "medsiglip-448": {
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "threads": 2,
+      "sensitivity_selection_git_hash": "d63c5ecc7a66865cf37c34a130030da03cf65029",
+      "sensitivity_tcn": {
+        "0": {
+          "depth": 6,
+          "epoch": 98,
+          "val_macro_f1": 0.8545965688278736
+        },
+        "1": {
+          "depth": 5,
+          "epoch": 65,
+          "val_macro_f1": 0.827189173539075
+        },
+        "2": {
+          "depth": 5,
+          "epoch": 85,
+          "val_macro_f1": 0.8248683664031079
+        }
+      },
+      "selection_git_hash": "c423454e2fa96e811865c1c7dce9dc2dc45460a7",
+      "hmm_floored": 0,
+      "single_frame_accuracy_check": 0.7383037660142168,
+      "tcn_receptive_field_s": {
+        "0": 31,
+        "1": 31,
+        "2": 31
+      },
+      "seconds": 6.3,
+      "peak_rss_mb": 873.6
+    },
+    "peskavlp": {
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "threads": 2,
+      "sensitivity_selection_git_hash": "d63c5ecc7a66865cf37c34a130030da03cf65029",
+      "sensitivity_tcn": {
+        "0": {
+          "depth": 5,
+          "epoch": 42,
+          "val_macro_f1": 0.7833281933552011
+        },
+        "1": {
+          "depth": 6,
+          "epoch": 48,
+          "val_macro_f1": 0.7824679402729938
+        },
+        "2": {
+          "depth": 7,
+          "epoch": 97,
+          "val_macro_f1": 0.8017983312552944
+        }
+      },
+      "selection_git_hash": "c423454e2fa96e811865c1c7dce9dc2dc45460a7",
+      "hmm_floored": 0,
+      "single_frame_accuracy_check": 0.6705501354461576,
+      "tcn_receptive_field_s": {
+        "0": 31,
+        "1": 31,
+        "2": 31
+      },
+      "seconds": 5.4,
+      "peak_rss_mb": 725.5
+    }
+  }
+}

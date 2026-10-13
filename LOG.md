@@ -250,6 +250,21 @@ TCN (CLIP, seed 0) is bit-identical to the saved one. Test run waits for Arnav.
 order with per-frame saving and stopping-rule progress; shown on 5 training-video frames
 (`--demo`). No pool frame tagged.
 
+### 2026-10-13 — Week 5, Task 4: RQ4 on 41–80 (RESULT, run once) + TCN sensitivity
+
+At Arnav's request, a secondary TCN sensitivity analysis, **not registered** (Deviations,
+`3bbe61f`; code `d63c5ec`): depths 2–8, up to 100 epochs, all else as registered.
+Extended selection on 33–40 (dev, `results/dev/tcn_sensitivity_val_20261013-213707`, at
+`d63c5ec`, 87 min): all 1,800 registered curve points (depths 2–4, epochs 1–50)
+reproduced exactly; chosen depths 5–7 (receptive fields 63–255 s). Commits
+`eebebfe`..`3bbe61f` pushed before the test run (last push received 2026-10-13T17:34:26Z).
+Test run once on a clean tree at `3bbe61f` (25 s): single frame reproduces the RQ3 probe
+accuracies exactly; HMM floored 0 posteriors; 472 rows appended to `results.csv`
+(prefix byte-identical), tables in `results/test/temporal_*.csv`. Accuracy gain over
+single frame, mean over the four backbones: MA causal +0.074 [0.066, 0.081], HMM forward
++0.049 [0.032, 0.065], TCN +0.023 [0.009, 0.037] (sensitivity TCN +0.041 [0.025, 0.058];
+MA centred +0.102, Viterbi +0.061). Not compared with the predictions.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.

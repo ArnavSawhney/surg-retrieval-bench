@@ -10,7 +10,8 @@ traps already hit.
 **Status:** RQ1/RQ2 (`c1ed8ed`) and RQ3 (`6918ba5`) run once on the test split and compared
 with the predictions in `docs/results_vs_predictions.md`. Week 5: section 4.4 clarified
 under Deviations (`eebebfe`), temporal models implemented (`c423454`), **validation run
-done (dev)**; the RQ4 test run waits for Arnav's go. RQ5 tagging tool built (`c75e985`);
+done (dev)**; TCN sensitivity analysis (not registered, `3bbe61f`); **RQ4 test run done
+once** at `3bbe61f` (not compared with the predictions). RQ5 tagging tool built (`c75e985`);
 no pool frame tagged. No GPU spend since Week 3.
 
 Start a new session by reading the local, git-excluded planning notes (see `.git/info/exclude`)
@@ -377,9 +378,13 @@ Week 5 (LOG.md, 13 Oct):
    run only loads it. 54 min wall with `--jobs 2 --threads 2`; per-(seed, depth) TCN
    training took 45–1,320 s (the long ones all in the second model pair; cause not
    established; weights are deterministic, so it does not affect the numbers).
-4. **Waiting for Arnav's go**: `eval_temporal.py --split test`, once, clean tree; appends
-   `single-frame`, `ma-causal`, `ma-centred`, `hmm-forward`, `hmm-viterbi`, `tcn-causal`
-   rows (TCN `seed` = 0, 1, 2 and `mean(0,1,2)`; other rows the bootstrap seed).
+4. **Done, RESULT**: `eval_temporal.py --split test`, once, clean tree at `3bbe61f`;
+   472 rows appended (`single-frame`, `ma-causal`, `ma-centred`, `hmm-forward`,
+   `hmm-viterbi`, `tcn-causal` with `seed` = 0, 1, 2 and `mean(0,1,2)`, and
+   `tcn-causal-sensitivity-not-registered`); tables `results/test/temporal_*.csv`.
+   Sensitivity: `scripts/select_tcn_sensitivity.py` (dev,
+   `results/dev/tcn_sensitivity_val_20261013-213707`). RQ4 vs predictions: only when
+   Arnav asks, and only the registered TCN counts.
 5. **Done** (`c75e985`): RQ5 tagging tool `scripts/tag_rq5.py` (image only, pool order,
    saves every frame). Arnav does the pool tagging:
    `.venv/bin/python scripts/tag_rq5.py` → http://127.0.0.1:8765; tags go to
@@ -405,7 +410,7 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 
 * GPU spend so far is in §1b (two L4 sessions, Week 3, ₹230.07); no instance is running,
   and none is needed in Weeks 4–5.
-* Say go (or not) for the RQ4 test run; tag the RQ5 pool with `scripts/tag_rq5.py`.
+* Approve pushing the RQ4 results; tag the RQ5 pool with `scripts/tag_rq5.py`.
 * Close VS Code and Chrome before any Mac indexing (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
   Endoscapes waits until Week 8 (decided 12 Oct).
