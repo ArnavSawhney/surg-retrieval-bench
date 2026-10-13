@@ -244,7 +244,9 @@ def main() -> None:
                          srows.assign(**common | {
                              "setting": "linear-probe-sensitivity-not-registered"})],
                         ignore_index=True)
-        pd.concat([pd.read_csv(results), new], ignore_index=True).to_csv(results, index=False)
+        # append only: re-writing would re-format the registered rows' floats
+        header = list(pd.read_csv(results, nrows=0).columns)
+        new.reindex(columns=header).to_csv(results, mode="a", header=False, index=False)
 
     print(f"\n*** {label} ***")
     with pd.option_context("display.width", 200, "display.float_format", "{:.4f}".format):
