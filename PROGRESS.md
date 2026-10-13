@@ -364,13 +364,19 @@ L4 total for Week 3: **₹230.07** over two sessions. Remote run log:
 
 Week 4 (from the local planning notes), in order:
 
-0. Housekeeping: `docs/results_vs_predictions.md` written (RQ1/RQ2; RQ3–RQ5 pending).
-   The float16 clarification for `## Deviations` is drafted and **waits for Arnav's OK**
-   before it is committed.
-1. RQ2 figures and table from the existing `results/test/` CSVs (no test rerun).
-2. Linear probe (`src/srb/probe.py`, `scripts/eval_probe.py`), exactly as section 4.3.
-3. Probe validation run 1–32 → 33–40 (`results/dev/`, not a result), then **stop**.
-4. RQ3 on 41–80, once, only after Arnav says go.
+0. Housekeeping: `docs/results_vs_predictions.md` written (RQ1/RQ2; RQ3–RQ5 pending)
+   (`03df79d`). The float16 clarification for `## Deviations` is drafted and **waits for
+   Arnav's OK** before it is committed.
+1. **Done** (`2c94d07`): RQ2 figures and table in `figures/`, from `results/test/` only.
+2. **Done** (`0f78684`, `7077afb`): `src/srb/probe.py`, `scripts/eval_probe.py`,
+   `tests/test_probe.py`.
+3. **Done, dev**: probe validation 1–32 → 33–40, `results/dev/probe_val_20261013-105258`
+   (LOG.md). Selected probes in `data/probe/<model>/probe.npz` (fit at `7077afb`),
+   phase posteriors of 1–40 next to them.
+4. **Next, after Arnav says go:** `scripts/eval_probe.py --split test` on a clean tree,
+   once. It loads the selected probes (no refit), writes `results/test/probe_*.csv`,
+   appends `setting=linear-probe` rows to `results/results.csv`, saves the 41–80
+   posteriors, and refuses to run a second time.
 5. Stretch: the RQ5 frame pool (section 4.5), hashed in `LOG.md` before tagging.
 
 Rules that still bind: the pre-registration is frozen (changes only under `## Deviations`,

@@ -171,6 +171,25 @@ RQ2c **falsified** (r1 best at 0.2488, r5 worst at 0.2319). RQ3–RQ5 pending. C
 PeskaVLP 2/7 negatives below every positive target mean, the others 7/7 (reported, not
 fixed). The optional image-only encoder can no longer be pre-registered (Parked).
 
+### 2026-10-13 — Week 4, Tasks 1–3: RQ2 figures, linear probe, probe validation (dev)
+
+**Task 1** (`2c94d07`): `scripts/make_rq2_figures.py` builds Fig. 1a/1b (AP per rephrasing,
+target and model, with prevalence), Fig. 2 (mean AP by role) and `figures/rq2_table.md`
+from the existing `results/test/` CSVs only (no rerun); every recomputed SD and range is
+checked against the per-target CSVs. One CVD-checked colour + marker per model
+(`src/srb/plotting.py`). Pins matplotlib 3.11.2.
+**Task 2** (`0f78684`, `7077afb`): `src/srb/probe.py`, `scripts/eval_probe.py`, 15 tests;
+section 4.3 as registered (lbfgs, L2, `max_iter` 5000, C grid, macro-F1 / AP on 33–40,
+no class weights, `assert_no_test_leakage` on every fit). 774 tests pass.
+**Task 3, dev, not a result** (`results/dev/probe_val_20261013-105258`, clean tree at
+`7077afb`): all 48 fits per model converged (max 573 iterations). Chosen phase C: 10
+(CLIP, SigLIP, MedSigLIP), 1 (PeskaVLP); 13 of the 28 tool heads chose the grid edge
+C = 100 (clipper and irrigator for every model). Validation phase accuracy / macro-F1 /
+tool mAP: CLIP 0.698 / 0.592 / 0.675, SigLIP 0.800 / 0.690 / 0.788, MedSigLIP
+0.797 / 0.699 / 0.786, PeskaVLP 0.692 / 0.606 / 0.697. 8.8 min wall, two models at a
+time, peak RSS 0.69–0.88 GB per model. Weights bit-identical on a rerun. Probes and
+phase posteriors of 1–40 in `data/probe/` (1–32 in-sample). Test run waits for Arnav.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
