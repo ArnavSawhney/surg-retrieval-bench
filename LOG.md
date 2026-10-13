@@ -159,6 +159,18 @@ reject at Holm 0.05 (largest Holm-adjusted p 0.0024). Intervals, the pairs table
 RQ2 order-change fractions are in `results/results.csv` and `results/test/`. Not compared
 with the registered predictions (not asked for yet). No rerun; no deviation.
 
+### 2026-10-13 — Week 4 (started early), Task 0: results vs predictions
+
+`docs/results_vs_predictions.md`: each RQ1/RQ2 prediction against the test run of
+13 Oct, every number recomputed from `results/test/` (Arnav asked for the comparison).
+RQ1a **supported** (PeskaVLP 0.2775, highest; all three differences Holm-significant),
+RQ1b **holds** (CLIP lowest), RQ1c **falsified** (SigLIP 0.2636 above MedSigLIP 0.2157),
+RQ1d **falsified** (PeskaVLP 0.2775 [0.2684, 0.2885], below 0.30; its prompt ensemble,
+0.3111, is secondary and does not count), RQ2a **holds** (mean SD 0.0444), RQ2b and
+RQ2c **falsified** (r1 best at 0.2488, r5 worst at 0.2319). RQ3–RQ5 pending. Calibration:
+PeskaVLP 2/7 negatives below every positive target mean, the others 7/7 (reported, not
+fixed). The optional image-only encoder can no longer be pre-registered (Parked).
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
@@ -208,3 +220,8 @@ Outside Session 1's scope. Not started.
 * Per-experiment YAMLs in `configs/` — when there is an experiment to configure.
 * CholecT50 action-triplet queries; Streamlit demo (Week 9); LoRA/adapter (Week 7 if
   time allows).
+* **Optional image-only encoder (EndoFM / SurgeNet-style), 2026-10-13.** Section 6 of the
+  pre-registration says its pin is valid only if dated before the first test-set number
+  of any model; RQ1 test numbers exist since 13 Oct (`c1ed8ed`), so it can no longer be
+  pre-registered. If it is ever run, it is **exploratory** and labelled so in every
+  table, figure and the text. Not run in Week 4.

@@ -5,14 +5,12 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 12 Oct 2026 (Week 3, day 1). **`prereg-v1` = `ff2b6e5`**, on GitHub
-since 2026-10-12T14:02:13Z. About 4 days behind plan (see `LOG.md`).
-**Status:** the protocol is frozen. Frames for videos 1–40 (86,304); 1–40 indexes for
-all four models (CLIP, SigLIP, MedSigLIP on a Jarvis L4 in float16; PeskaVLP on the
-Mac, merged 1–5 + 6–40; §1b). The 41–80 fetch guard is lifted (`b09781b`); the
-**scoring lock is still on** (lifted only in Task 5, after Arnav says go). The
-registered evaluation (`scripts/eval_registered.py`) is committed (`60a352f`).
-`results/results.csv` stays empty until Task 5. **No result produced.**
+**Last updated:** 13 Oct 2026 (Week 4, started early; scheduled 17–23 Oct).
+**`prereg-v1` = `ff2b6e5`**, on GitHub since 2026-10-12T14:02:13Z.
+**Status:** RQ1/RQ2 registered test run done once (`c1ed8ed`, run at `1759cb4`);
+compared with the predictions in `docs/results_vs_predictions.md`. Week 4: RQ2 figures,
+then the RQ3 linear probe (validation first; test only after Arnav says go). No GPU spend
+this week.
 
 Start a new session by reading the local, git-excluded planning notes (see `.git/info/exclude`)
 — they are the source of truth for scope and hard rules, and they are private: never
@@ -364,14 +362,21 @@ L4 total for Week 3: **₹230.07** over two sessions. Remote run log:
 
 ## 4. Next up
 
-Week 3 is done: Tasks 0–5, one test run (`results/results.csv`, LOG.md 13 Oct). The
-pre-registration is frozen: any change of protocol is appended under "Deviations" and
-shown to Arnav before it is committed. **Do not rerun the test split** without telling
-Arnav first; a rerun for a bug is a Deviation.
+Week 4 (from the local planning notes), in order:
 
-1. Week 4 scope from the local planning notes (not started).
-2. Comparison of the results with the registered predictions (§5 of the
-   pre-registration) only when Arnav asks for it.
+0. Housekeeping: `docs/results_vs_predictions.md` written (RQ1/RQ2; RQ3–RQ5 pending).
+   The float16 clarification for `## Deviations` is drafted and **waits for Arnav's OK**
+   before it is committed.
+1. RQ2 figures and table from the existing `results/test/` CSVs (no test rerun).
+2. Linear probe (`src/srb/probe.py`, `scripts/eval_probe.py`), exactly as section 4.3.
+3. Probe validation run 1–32 → 33–40 (`results/dev/`, not a result), then **stop**.
+4. RQ3 on 41–80, once, only after Arnav says go.
+5. Stretch: the RQ5 frame pool (section 4.5), hashed in `LOG.md` before tagging.
+
+Rules that still bind: the pre-registration is frozen (changes only under `## Deviations`,
+shown to Arnav first); **no rerun of the RQ1/RQ2 test split**; no verdicts on RQ3–RQ5
+until Arnav asks; the optional image-only encoder can only be exploratory now (LOG.md,
+Parked).
 
 **Test scoring is unlocked** (`1759cb4`, after `ff2b6e5`): `evaluate()` and
 `evaluate_model()` accept videos 41–80. `eval_retrieval.py` (dev queries) still refuses
@@ -386,9 +391,12 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 
 ## 6. Manual actions still outstanding for Arnav
 
-* Read the Week 3 report and the first RQ1 table (LOG.md, 13 Oct); say when to compare
-  with the registered predictions.
-* GPU spend so far is in §1b (two L4 sessions, Week 3); no instance is running.
+* Approve (or edit) the drafted float16 clarification before it goes under
+  `## Deviations`.
+* Look at the RQ2 figures (`figures/`) and the probe validation numbers; say go for the
+  RQ3 test run.
+* GPU spend so far is in §1b (two L4 sessions, Week 3, ₹230.07); no instance is running,
+  and none is needed in Week 4.
 * Close VS Code and Chrome before any Mac indexing (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
   Endoscapes waits until Week 8 (decided 12 Oct).
