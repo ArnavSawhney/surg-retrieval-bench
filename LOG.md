@@ -218,6 +218,15 @@ scores or predictions in the file.
 **Pool SHA-256: `0655cf3ab2ff7bc4d4149a87e976e63fd8705e03c2f8f5c52dd7ca32ec73c291`.**
 No frame has been tagged; the tagging UI is Week 8.
 
+### 2026-10-13 — Week 4 close: RQ3 against the predictions
+
+Pushed `d57bac8..dbe09a0`. At Arnav's request, RQ3 added to
+`docs/results_vs_predictions.md`, recomputed from `results/test/` (summary, registered
+zero-shot tables, saved test posteriors vs labels; all agree): **RQ3a holds**
+(PeskaVLP probe accuracy 0.6706), **RQ3b holds** (gain +0.3247), **RQ3c falsified**
+(spread shrinks 0.2145 → 0.0678, but PeskaVLP has the lowest probe accuracy). The C-grid
+sensitivity analysis is in no verdict. Week 4 done; Week 5 gets its own prompt.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.

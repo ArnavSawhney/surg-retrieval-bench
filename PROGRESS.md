@@ -9,8 +9,8 @@ traps already hit.
 **`prereg-v1` = `ff2b6e5`**, on GitHub since 2026-10-12T14:02:13Z.
 **Status:** RQ1/RQ2 registered test run done once (`c1ed8ed`, run at `1759cb4`);
 compared with the predictions in `docs/results_vs_predictions.md`. Week 4 done: RQ2
-figures, RQ3 linear probe run once on 41–80 (`6918ba5`, run at `d57bac8`; not yet
-compared with the predictions), RQ5 frame pool drawn and hashed (no tagging yet). Two
+figures, RQ3 linear probe run once on 41–80 (`6918ba5`, run at `d57bac8`) and compared with
+the predictions (RQ3a, RQ3b hold; RQ3c falsified), RQ5 frame pool drawn and hashed (no tagging yet). Two
 Deviations committed. No GPU spend this week.
 
 Start a new session by reading the local, git-excluded planning notes (see `.git/info/exclude`)
@@ -368,7 +368,7 @@ L4 total for Week 3: **₹230.07** over two sessions. Remote run log:
 
 Week 4 is done (LOG.md, 13 Oct):
 
-0. **Done**: `docs/results_vs_predictions.md` (RQ1/RQ2; RQ3–RQ5 pending) (`03df79d`);
+0. **Done**: `docs/results_vs_predictions.md` (RQ1–RQ3; RQ4–RQ5 pending) (`03df79d`);
    Deviations: float16 clarification (`0365b2d`), tool-head C-grid sensitivity, not
    registered (`d57bac8`).
 1. **Done** (`2c94d07`): RQ2 figures and table in `figures/`, from `results/test/` only.
@@ -379,12 +379,13 @@ Week 4 is done (LOG.md, 13 Oct):
    `data/probe/<model>/` (`probe.npz`, `probe_tools_sensitivity.npz`).
 4. **Done, RESULT** (`6918ba5`): probe test run, once. `results/test/probe_*.csv`,
    `setting=linear-probe` and `linear-probe-sensitivity-not-registered` rows in
-   `results.csv`; posteriors of 41–80 in `data/probe/<model>/`. **Not compared with the
-   RQ3 predictions until Arnav asks**; only the primary analysis is compared.
+   `results.csv`; posteriors of 41–80 in `data/probe/<model>/`. Compared with the RQ3
+   predictions at Arnav's request (`docs/results_vs_predictions.md`); only the primary
+   analysis enters a verdict.
 5. **Done** (`0c16ca7` + pool commit): `docs/rq5_frame_pool.csv`, SHA-256 in LOG.md.
    Tagging (and its UI) is Week 8; tag in `tag_order`, image only.
 
-Next: RQ3 verdicts when Arnav asks; RQ4 temporal models (section 4.4) use the saved
+Next (Week 5, its own prompt): RQ4 temporal models (section 4.4) use the saved
 phase posteriors.
 
 Rules that still bind: the pre-registration is frozen (changes only under `## Deviations`,
@@ -405,7 +406,6 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 
 ## 6. Manual actions still outstanding for Arnav
 
-* Say when to compare the RQ3 test numbers with the predictions.
 * GPU spend so far is in §1b (two L4 sessions, Week 3, ₹230.07); no instance is running,
   and none is needed in Week 4.
 * Close VS Code and Chrome before any Mac indexing (trap 11).

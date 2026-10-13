@@ -14,7 +14,11 @@ yet). Only RQ1a is confirmatory (section 4.6); every other verdict is descriptiv
 rests on point estimates, as section 5 says.
 
 Written on 13 October 2026, after the RQ1/RQ2 test run and before any RQ3–RQ5
-experiment on the test split.
+experiment on the test split. RQ3 added on 13 October 2026, after the single linear-probe
+test run (`6918ba5`, run at `d57bac8`; probes selected on videos 33–40 at `7077afb`).
+Its numbers were recomputed from `results/test/probe_summary.csv`, the registered
+zero-shot tables `results/test/*_classification.csv`, and the saved test-set phase
+posteriors scored against the labels; all three agree.
 
 ## Test-set numbers used
 
@@ -58,6 +62,20 @@ the five rephrasings, and mean AP by rephrasing role (mean over the 14 targets).
 | PeskaVLP | 0.0770 | 0.2809 | 0.2864 | 0.2481 | 0.2626 | 0.3094 |
 | **mean over models** | **0.0444** | **0.2488** | 0.2408 | 0.2396 | 0.2382 | **0.2319** |
 
+RQ3, linear probe (section 4.3): phase accuracy of the probe selected on videos 33–40,
+zero-shot phase accuracy (headline: mean over r1–r5, section 4.2) and the gain. Intervals:
+95% percentile, paired video-level bootstrap, the first 2,000 resamples (descriptive).
+
+| model | probe phase accuracy [95% CI] | zero-shot phase accuracy | gain [95% CI] |
+|---|---|---|---|
+| MedSigLIP-448 | 0.7383 [0.7125, 0.7651] | 0.1706 | +0.5678 [+0.5393, +0.5966] |
+| SigLIP so400m-384 | 0.7341 [0.7031, 0.7643] | 0.1440 | +0.5901 [+0.5553, +0.6228] |
+| CLIP ViT-L/14 | 0.6839 [0.6523, 0.7156] | 0.1314 | +0.5526 [+0.5202, +0.5825] |
+| PeskaVLP | 0.6706 [0.6438, 0.6974] | 0.3459 | +0.3247 [+0.3027, +0.3452] |
+
+Best-to-worst spread across the four models: zero-shot 0.2145 [0.1976, 0.2298] (PeskaVLP
+− CLIP); probe 0.0678 [0.0560, 0.0848] (MedSigLIP − PeskaVLP).
+
 ## Verdicts
 
 | ID | Prediction (section 5, verbatim) | Test-set number | Verdict | Deciding rule (section 5) |
@@ -69,9 +87,9 @@ the five rephrasings, and mean AP by rephrasing role (mean over the 14 targets).
 | RQ2a | rewording matters moderately. The mean over targets of the SD of AP across the five rephrasings, averaged over the models, is **between 0.02 and 0.05**. *Falsified if* it is below 0.02 or above 0.05. | 0.0444 (per model 0.0229–0.0770) | **holds** | inside 0.02–0.05 |
 | RQ2b | averaged over models and targets, **r3 (what is visible) has the highest mean AP**. *Falsified if* another role is higher. | r1 0.2488 is highest; r3 0.2396 is third | **falsified** | another role (r1) is higher |
 | RQ2c | **r2 (the action, surgeon or instrument as subject) has the lowest mean AP**. *Falsified if* another role is lower. | r5 0.2319 is lowest; r2 0.2408 is second | **falsified** | another role (r5) is lower |
-| RQ3a | PeskaVLP's linear-probe phase accuracy is between 60% and 75%. | — | pending | — |
-| RQ3b | the probe adds 20 to 35 points over PeskaVLP's zero-shot phase accuracy. | — | pending | — |
-| RQ3c | the probe narrows the gap between backbones but PeskaVLP stays on top. | — | pending | — |
+| RQ3a | PeskaVLP's linear-probe phase accuracy is **between 60% and 75%**. *Falsified if* it is outside that range. | 0.6706 (67.1%) | **holds** | inside 60–75% |
+| RQ3b | the probe adds **20 to 35 points** over PeskaVLP's zero-shot phase accuracy (headline over r1–r5, section 4.2). The published gain is about 25 points with clinician-written prompts; the headline here averages five untuned rephrasings, so zero-shot accuracy is expected to be lower and the gain at least as large. *Falsified if* the gain is outside 20–35 points. | 0.6706 − 0.3459 = +0.3247 (32.5 points) | **holds** | inside 20–35 points |
+| RQ3c | the probe **narrows** the gap between backbones but PeskaVLP stays on top. The spread between the best and worst backbone in probe phase accuracy is **smaller** than the spread in zero-shot phase accuracy, and PeskaVLP has the highest probe accuracy. *Falsified if* the spread does not shrink, or another backbone has a higher probe accuracy. | spread 0.2145 (zero-shot) → 0.0678 (probe); PeskaVLP's probe accuracy 0.6706 is the **lowest** (MedSigLIP 0.7383, SigLIP 0.7341, CLIP 0.6839) | **falsified** | the spread shrinks, but three other backbones have a higher probe accuracy |
 | RQ4a–c | temporal context (gain, best causal method, gain vs backbone spread). | — | pending | — |
 | RQ5a–c | failure modes (largest artefact drop, its size, PeskaVLP robustness). | — | pending | — |
 
@@ -88,6 +106,21 @@ Notes on the verdicts:
   not stable. The verdicts follow the point-estimate rule as registered. The models
   disagree on which role is best: r5 is PeskaVLP's best role and the worst role of each
   of the other three.
+
+* **RQ3 and the sensitivity analysis.** The tool-head C-grid sensitivity analysis
+  (Deviations, 2026-10-13; `results/test/probe_sensitivity_*.csv`) is not registered
+  and is not part of any verdict. It changes only tool heads, and section 5 makes no
+  prediction for tool mAP; every RQ3 verdict uses the primary, registered analysis.
+* **RQ3c** fails on its second condition only. The first condition holds: the spread
+  falls from 0.2145 to 0.0678. PeskaVLP is last on the point estimates, which is the
+  rule. The interval of its gap to CLIP (−0.0134 [−0.0366, +0.0106]) includes zero; those
+  of its gaps to SigLIP (−0.0635 [−0.0796, −0.0455]) and MedSigLIP (−0.0678
+  [−0.0840, −0.0521]) do not (descriptive intervals, no significance claim, section 4.6).
+  PeskaVLP's zero-shot lead (0.3459, the highest) does not survive the probe.
+* **RQ3a and RQ3b** also hold over their whole descriptive intervals (accuracy
+  [0.6438, 0.6974]; gain [+0.3027, +0.3452]). PeskaVLP's gain is the smallest of the
+  four (the others gain +0.55 to +0.59): it starts from the highest zero-shot accuracy
+  and ends at the lowest probe accuracy.
 
 ## Other registered checks
 
