@@ -176,7 +176,9 @@ def main() -> None:
     t0 = time.time()
 
     jobs = [(m, args.split, ghash) for m in args.models]
-    with ProcessPoolExecutor(max_workers=min(args.jobs, len(jobs))) as pool:
+    # one fresh process per model, so each model's peak RSS is its own
+    with ProcessPoolExecutor(max_workers=min(args.jobs, len(jobs)),
+                             max_tasks_per_child=1) as pool:
         done = list(pool.map(_run, jobs))
     evals = {d["model"]: d["eval"] for d in done}
     infos = {d["model"]: d["info"] for d in done}
