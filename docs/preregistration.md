@@ -533,3 +533,29 @@ upcasts them to float32. Each index's `meta.json` records its compute dtype. Tes
 numbers existed when this entry was written; the choice was made before them. No
 reported number changes, because every test-set number was computed from these
 embeddings.
+
+### 2026-10-13 — secondary sensitivity analysis: probe tool heads over an extended C grid (not registered)
+
+**What is added.** A secondary RQ3 analysis, labelled "sensitivity, not registered".
+Each tool head of the linear probe (section 4.3) is re-selected by AP on videos 33–40
+over the registered C grid extended with {1e3, 1e4}, giving {1e-3, 1e-2, 1e-1, 1, 10,
+100, 1e3, 1e4}. Everything else follows 4.3: training on videos 1–32, lbfgs, L2,
+max_iter 5000, no class weighting, and ties going to the smaller C, as in the
+registered implementation (section 4.3 does not specify a tie rule). Phase heads stay
+on the registered grid only. On videos 41–80, this analysis's tool mAP is reported next
+to the primary tool mAP. Both use the same 2,000 paired resamples of
+`default_rng(20261011)`, and the paired difference is reported too.
+
+**Why.** In the validation run (videos 33–40, 13 October 2026, `7077afb`), 13 of the 28
+tool heads (4 models × 7 tools) chose C = 100, the largest value in the grid. The best
+C for those heads may lie above the grid.
+
+**Test-set numbers seen.** The RQ1/RQ2 test-set numbers existed (13 October,
+`1759cb4`). No RQ3 test-set number existed: the probe had not been scored on any test
+video. The extended-grid selection on 33–40 was run before this entry was committed
+(dev, `fa89df2`) and used no test video.
+
+**Affects.** Nothing registered. The primary RQ3 analysis, its grid and its tool mAP are
+unchanged, and only the primary analysis is compared with the RQ3 predictions. The
+sensitivity numbers are added rows (`setting = linear-probe-sensitivity-not-registered`)
+and files (`results/test/probe_sensitivity_*.csv`).
