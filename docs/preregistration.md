@@ -518,4 +518,18 @@ and is only valid if dated before the first test-set number of any model.
 
 ## Deviations
 
-None yet.
+### 2026-10-13 — clarification of section 2 (no protocol change)
+
+Section 2 pins model revisions, not the compute precision of the image encoders. Frame
+embeddings for videos 1–80 were computed in float16 on an NVIDIA L4 for CLIP, SigLIP and
+MedSigLIP, and in float32 on Apple MPS for PeskaVLP; all four are stored in float16 as
+before. The float16 choice was made on 12 October 2026, before any test-set number
+existed (the first came on 13 October at `1759cb4`). Check against float32 on the same
+512 frames: min cosine 0.99994 (CLIP), 0.99982 (SigLIP), 0.99997 (MedSigLIP)
+(`PROGRESS.md` §1b). Cross-device check, CLIP video04, L4 float16 vs Mac float32: min
+cosine 0.99977, run before both the 1–40 and the 41–80 runs. Similarities are computed
+in float32 from the stored embeddings, as section 2 requires, and the probe (4.3)
+upcasts them to float32. Each index's `meta.json` records its compute dtype. Test-set
+numbers existed when this entry was written; the choice was made before them. No
+reported number changes, because every test-set number was computed from these
+embeddings.
