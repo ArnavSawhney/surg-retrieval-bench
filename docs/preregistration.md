@@ -610,3 +610,39 @@ of the selected probes (4.3) exactly as saved, and the probes are not refitted.
   difference on the same resamples, reported for all four metrics. All descriptive.
 
 **Affects.** No registered choice changes; these fix details that 4.4 leaves open.
+
+### 2026-10-13 — secondary sensitivity analysis: causal TCN over an extended depth and epoch grid (not registered)
+
+**What is added.** A secondary RQ4 analysis, labelled "sensitivity, not registered". The
+causal TCN of section 4.4 is re-selected on videos 33–40 over **depths {2, 3, 4, 5, 6, 7,
+8}** and **at most 100 epochs**. Everything else is as registered and as in the
+clarification of section 4.4 above: the same architecture rule (dilations 1, 2, 4, …,
+2^(D−1)), the same seeds (0, 1, 2), training on videos 1–32 only, the same joint
+(depth, epoch) selection by macro-F1 on 33–40 per seed with the same tie rule, and the
+same CPU threads with deterministic algorithms. Because training does not depend on the
+epoch cap, the first 50 epochs of depths 2–4 reproduce the registered validation curves
+exactly (checked by the script, which stops otherwise). On videos 41–80 this analysis is
+reported next to the registered TCN, per seed and as the mean over seeds, on the same
+2,000 paired resamples of `default_rng(20261011)`, with the paired difference
+(sensitivity − registered).
+
+**Why.** In the validation run (videos 33–40, 13 October 2026, `c423454`), 10 of the 12
+(backbone, seed) TCN selections chose depth 4, the largest registered depth, and 2 chose
+epoch 50, the last registered epoch. With kernel 3 and dilations 1, 2, 4, 8, a depth-4
+causal TCN has a receptive field of exactly 31 frames (1 + 2·(1 + 2 + 4 + 8)), i.e. 31 s
+at 1 fps; depths 5–8 give 63, 127, 255 and 511 s. Cholec80 phases last minutes: in
+training videos 1–32 the median phase segment lasts 152 s (from 74 s for
+GallbladderRetraction to 666 s for CalotTriangleDissection). The best TCN may lie
+outside the registered grid.
+
+**Test-set numbers seen.** The RQ1/RQ2 (13 October, `1759cb4`) and RQ3 (13 October,
+`d57bac8`) test-set numbers existed. No RQ4 test-set number existed: no temporal model
+had been scored on any test video. The registered RQ4 validation run (`c423454`) and the
+extended selection on 33–40 (dev, `d63c5ec`) were run before this entry was committed;
+neither used a test video.
+
+**Affects.** Nothing registered. The registered TCN (depths 2–4, at most 50 epochs), its
+selection and every verdict are unchanged, and only the registered TCN is compared with
+the RQ4 predictions. The sensitivity numbers are added rows
+(`setting = tcn-causal-sensitivity-not-registered`) and a file
+(`results/test/temporal_tcn_sensitivity.csv`).
