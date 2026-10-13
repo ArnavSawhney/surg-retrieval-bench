@@ -3,7 +3,6 @@ on 33-40 only, the test run never fits or selects, appends to results.csv once."
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -24,11 +23,11 @@ HEADER = ("model,metric,value,ci_low,ci_high,n_boot,setting,split,seed,git_hash,
 REGISTERED = "fake,phase_map,0.17565920732316115,0.1,0.2,2000,zero-shot,test,1,h,d,,,\n"
 
 
-def _load_script():
-    spec = importlib.util.spec_from_file_location("eval_temporal", SCRIPT)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+def _load_scripts():
+    sys.path.insert(0, str(SCRIPT.parent))
+    import eval_temporal
+    import select_tcn_sensitivity
+    return eval_temporal, select_tcn_sensitivity
 
 
 def _build_root(root: Path) -> None:
@@ -67,15 +66,23 @@ def _build_root(root: Path) -> None:
 
 
 @pytest.fixture
-def script(tmp_path, monkeypatch):
+def scripts(tmp_path, monkeypatch):
     _build_root(tmp_path)
-    mod = _load_script()
-    monkeypatch.setattr(mod, "ROOT", tmp_path)
-    monkeypatch.setattr(mod, "MODELS", (MODEL,))
+    mod, sens = _load_scripts()
+    for m in (mod, sens):
+        monkeypatch.setattr(m, "ROOT", tmp_path)
+        monkeypatch.setattr(m, "MODELS", (MODEL,))
+        monkeypatch.setattr(m, "git_hash", lambda root: "cafe")
     monkeypatch.setattr(mod, "_SPECS", {MODEL: SimpleNamespace(revision="rev")})
-    monkeypatch.setattr(mod, "git_hash", lambda root: "cafe")
     monkeypatch.setattr(tm, "EPOCHS", 2)
-    return mod
+    monkeypatch.setattr(tm, "EPOCHS_SENSITIVITY", 3)
+    monkeypatch.setattr(tm, "DEPTHS_SENSITIVITY", (2, 3, 4, 5))
+    return mod, sens
+
+
+@pytest.fixture
+def script(scripts):
+    return scripts[0]
 
 
 def _main(mod, monkeypatch, split):
@@ -84,7 +91,13 @@ def _main(mod, monkeypatch, split):
     mod.main()
 
 
-def test_val_then_test_run(script, tmp_path, monkeypatch):
+def _sens_main(sens, monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["select_tcn_sensitivity.py", "--jobs", "1", "--threads", "1"])
+    sens.main()
+
+
+def test_val_then_test_run(scripts, tmp_path, monkeypatch):
+    script, sens = scripts
     seen = {"train": set(), "select": set()}
     real_train, real_sel = tm.train_tcn, tm.select_window
 
@@ -108,6 +121,19 @@ def test_val_then_test_run(script, tmp_path, monkeypatch):
     assert summ.label.str.contains("NOT A RESULT").all()
     assert (tmp_path / "results/results.csv").read_text() == HEADER + REGISTERED
 
+    # sensitivity selection: refuses before it exists; reproduces the registered curves
+    with pytest.raises(SystemExit, match="selection_sensitivity.json"):
+        _main(script, monkeypatch, "test")
+    monkeypatch.setattr(sens, "REGISTERED_VAL", dev)
+    seen["train"], seen["select"] = set(), set()
+    _sens_main(sens, monkeypatch)
+    assert seen["train"] == set(range(1, 33)) and seen["select"] == set(range(33, 41))
+    ssel = json.loads((tmp_path / "data/temporal/fake/selection_sensitivity.json").read_text())
+    assert ssel["depths"] == [2, 3, 4, 5] and ssel["max_epochs"] == 3
+    sdev = next((tmp_path / "results/dev").glob("tcn_sensitivity_val_*"))
+    assert pd.read_csv(sdev / "tcn_sensitivity_diff.csv").label.str.contains(
+        "NOT REGISTERED").all()
+
     # the test run never fits or selects anything
     def boom(*a, **k):
         raise AssertionError("fit or selection called in the test run")
@@ -120,7 +146,12 @@ def test_val_then_test_run(script, tmp_path, monkeypatch):
     res = pd.read_csv(tmp_path / "results/results.csv")
     new = res.iloc[1:]
     assert set(new.setting) == {"single-frame", "ma-causal", "ma-centred", "hmm-forward",
-                                "hmm-viterbi", "tcn-causal"}
+                                "hmm-viterbi", "tcn-causal",
+                                "tcn-causal-sensitivity-not-registered"}
+    srow = new[(new.setting == "tcn-causal-sensitivity-not-registered")
+               & (new.metric == "temporal_accuracy_sensitivity_minus_registered")]
+    assert len(srow) == 1 and srow.seed.iloc[0] == "mean(0,1,2)"
+    assert (tmp_path / "results/test/temporal_tcn_sensitivity.csv").exists()
     tcn = new[(new.setting == "tcn-causal") & (new.metric == "temporal_accuracy")]
     assert sorted(tcn.seed.astype(str)) == ["0", "1", "2", "mean(0,1,2)"]
     assert (new.split == "test").all() and (new.git_hash == "cafe").all()
@@ -130,6 +161,18 @@ def test_val_then_test_run(script, tmp_path, monkeypatch):
     assert sf == ref
     with pytest.raises(SystemExit, match="happens once"):
         _main(script, monkeypatch, "test")
+
+
+def test_sensitivity_stops_if_registered_curves_differ(scripts, tmp_path, monkeypatch):
+    script, sens = scripts
+    _main(script, monkeypatch, "val")
+    dev = next((tmp_path / "results/dev").glob("temporal_val_*"))
+    c = pd.read_csv(dev / "temporal_tcn_curves.csv")
+    c.loc[0, "val_macro_f1"] += 1e-9
+    c.to_csv(dev / "temporal_tcn_curves.csv", index=False)
+    monkeypatch.setattr(sens, "REGISTERED_VAL", dev)
+    with pytest.raises(SystemExit, match="differ from the registered run"):
+        _sens_main(sens, monkeypatch)
 
 
 def test_single_frame_mismatch_stops_the_run(script, tmp_path, monkeypatch):

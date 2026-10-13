@@ -14,7 +14,9 @@ dicts keyed by Cholec80 video ID.
   filtering (primary, causal) and Viterbi (secondary, offline). Nothing is tuned.
 * **Causal TCN:** dilated causal convolutions over the frozen embeddings (``CausalTCN``);
   depth and epoch chosen jointly on 33-40 per seed; trained on the CPU with
-  deterministic algorithms.
+  deterministic algorithms. A secondary sensitivity analysis, **not registered**
+  (Deviations, 2026-10-13), re-selects over depths 2-8 and up to 100 epochs, all else
+  identical.
 * **Metrics:** accuracy and macro-F1 pooled over frames (as in 4.2); Jaccard per phase
   per video, averaged over the videos in which the phase occurs, then over phases;
   segmental edit score (Lea et al., 2016) per video, averaged over videos. Bootstrap
@@ -43,6 +45,9 @@ WINDOWS = (5, 10, 20, 30, 60, 120)  # seconds = frames at 1 fps
 DEPTHS = (2, 3, 4)
 SEEDS = (0, 1, 2)
 EPOCHS = 50
+# secondary TCN sensitivity analysis, not registered (Deviations, 2026-10-13)
+DEPTHS_SENSITIVITY = tuple(range(2, 9))
+EPOCHS_SENSITIVITY = 100
 LR = 1e-3
 CHANNELS = 64
 KERNEL = 3
@@ -177,7 +182,7 @@ def _torch():
 
 def make_tcn(in_dim: int, depth: int):
     """Layer 1: causal conv in_dim -> 64 (kernel 3, dilation 1); layers 2..depth: 64 ->
-    64 with dilations 2, 4, 8; ReLU after each; 1x1 conv 64 -> 7. Causality by
+    64 with dilations 2, 4, 8, ...; ReLU after each; 1x1 conv 64 -> 7. Causality by
     left-only zero padding of (k-1)*d frames. No normalisation, dropout or residuals."""
     torch = _torch()
     nn = torch.nn

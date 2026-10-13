@@ -20,6 +20,12 @@ scores every method on 41-80, writes results/test/temporal_*.csv and appends row
 results/results.csv (settings single-frame, ma-causal, ma-centred, hmm-forward,
 hmm-viterbi, tcn-causal; TCN rows per seed plus the mean).
 
+Secondary TCN sensitivity analysis, NOT REGISTERED (Deviations, 2026-10-13): --split test
+also scores the TCNs re-selected over depths 2-8 and up to 100 epochs
+(scripts/select_tcn_sensitivity.py, data/temporal/<model>/tcn_sensitivity_seed*.pt) on the
+same resamples, next to the registered TCN, with setting
+tcn-causal-sensitivity-not-registered. The registered analysis is unchanged.
+
 The single-frame prediction must reproduce the probe's registered phase accuracy on the
 same split exactly, or the script stops. Intervals: paired video-level bootstrap, the
 first 2,000 resamples of default_rng(20261011), the same resamples for every model and
@@ -56,8 +62,13 @@ LABEL = {"val": "DEV, videos 33-40 (val split), trained on 1-32, NOT A RESULT",
          "test": "RESULT, Cholec80 test videos 41-80"}
 PROBE_SUMMARY = {"val": "results/dev/probe_val_20261013-105258/probe_summary.csv",
                  "test": "results/test/probe_summary.csv"}
+TCN, TCN_SENS = "tcn-causal", "tcn-causal-sensitivity"
+SENS_SETTING = "tcn-causal-sensitivity-not-registered"
+SENS_SELECTION = "selection_sensitivity.json"
+SENS_LABEL = ("RESULT, Cholec80 test videos 41-80; TCN SENSITIVITY, NOT REGISTERED "
+              "(depths 2-8, up to 100 epochs; Deviations 2026-10-13)")
 SETTINGS = ("single-frame", "ma-causal", "ma-centred", "hmm-forward", "hmm-viterbi",
-            "tcn-causal")
+            "tcn-causal", SENS_SETTING)
 CAUSAL = ("ma-causal", "hmm-forward", "tcn-causal")
 
 
@@ -164,10 +175,17 @@ def _run(job) -> dict:
         w_c, w_o = selection["w_causal"], selection["w_centred"]
         h = np.load(tdir / "hmm.npz")
         hmm = tm.HMM(h["pi"], h["A"], h["prior"])
-        nets = {}
+        nets, sens_nets = {}, {}
         for seed in tm.SEEDS:
             ck = torch.load(tdir / f"tcn_seed{seed}.pt", weights_only=True)
             nets[seed] = tm.load_tcn(ck["state"], ck["in_dim"], ck["depth"])
+            ck = torch.load(tdir / f"tcn_sensitivity_seed{seed}.pt", weights_only=True)
+            sens_nets[seed] = tm.load_tcn(ck["state"], ck["in_dim"], ck["depth"])
+        sens = json.loads((tdir / SENS_SELECTION).read_text())
+        if sens["revision"] != imeta["revision"]:
+            raise SystemExit(f"{model}: sensitivity selection and index revisions differ")
+        info["sensitivity_selection_git_hash"] = sens["git_hash"]
+        info["sensitivity_tcn"] = sens["tcn"]
     info["selection_git_hash"] = selection["git_hash"]
 
     preds = {"single-frame": {v: p.argmax(1) for v, p in P.items()},
@@ -176,7 +194,10 @@ def _run(job) -> dict:
     preds["hmm-forward"], info["hmm_floored"] = tm.hmm_predict(P, hmm, "forward")
     preds["hmm-viterbi"], _ = tm.hmm_predict(P, hmm, "viterbi")
     for seed, net in nets.items():
-        preds[f"tcn-causal-seed{seed}"] = tm.tcn_predict(net, X)
+        preds[f"{TCN}-seed{seed}"] = tm.tcn_predict(net, X)
+    if split == "test":
+        for seed, net in sens_nets.items():
+            preds[f"{TCN_SENS}-seed{seed}"] = tm.tcn_predict(net, X)
     stats = {m: tm.video_stats(p, truth) for m, p in preds.items()}
     info["single_frame_accuracy_check"] = check_single_frame(model, split, stats["single-frame"])
     info["tcn_receptive_field_s"] = {str(s): tm.receptive_field(int(selection["tcn"][str(s)]["depth"]))
@@ -189,16 +210,21 @@ def _run(job) -> dict:
 
 def summarise(done: list[dict], counts: np.ndarray):
     """Per (model, method, metric): value and interval, and the paired gain over single
-    frame; TCN seeds individually and as their mean (SD over seeds on the full set)."""
-    rows, boots = [], {}
+    frame; TCN seeds individually and as their mean (SD over seeds on the full set).
+    Also the gain averaged over backbones and, when the sensitivity TCN is present, its
+    paired difference from the registered TCN."""
+    rows, boots, sd = [], {}, {}
     for d in done:
         model, stats = d["model"], d["stats"]
         pt = {m: tm.point_metrics(s) for m, s in stats.items()}
         bt = {m: tm.weighted_metrics(s, counts) for m, s in stats.items()}
-        seeds = [f"tcn-causal-seed{s}" for s in tm.SEEDS]
-        pt["tcn-causal"] = {k: float(np.mean([pt[s][k] for s in seeds])) for k in tm.METRICS}
-        bt["tcn-causal"] = {k: np.mean([bt[s][k] for s in seeds], 0) for k in tm.METRICS}
-        sd = {k: float(np.std([pt[s][k] for s in seeds], ddof=1)) for k in tm.METRICS}
+        for group in (TCN, TCN_SENS):
+            seeds = [f"{group}-seed{s}" for s in tm.SEEDS]
+            if seeds[0] not in pt:
+                continue
+            pt[group] = {k: float(np.mean([pt[s][k] for s in seeds])) for k in tm.METRICS}
+            bt[group] = {k: np.mean([bt[s][k] for s in seeds], 0) for k in tm.METRICS}
+            sd[group] = {k: float(np.std([pt[s][k] for s in seeds], ddof=1)) for k in tm.METRICS}
         for method in pt:
             for k in tm.METRICS:
                 lo, hi = percentile_ci(bt[method][k])
@@ -206,7 +232,7 @@ def summarise(done: list[dict], counts: np.ndarray):
                 glo, ghi = percentile_ci(gain)
                 rows.append({"model": model, "method": method, "metric": k,
                              "value": pt[method][k], "ci_low": lo, "ci_high": hi,
-                             "sd_over_seeds": sd[k] if method == "tcn-causal" else np.nan,
+                             "sd_over_seeds": sd[method][k] if method in sd else np.nan,
                              "gain": pt[method][k] - pt["single-frame"][k],
                              "gain_ci_low": glo, "gain_ci_high": ghi,
                              "n_boot": len(counts)})
@@ -223,7 +249,18 @@ def summarise(done: list[dict], counts: np.ndarray):
             mrows.append({"method": method, "metric": k, "mean_gain": float(pts["gain"].mean()),
                           "ci_low": lo, "ci_high": hi, "n_models": len(models),
                           "n_boot": len(counts)})
-    return table, pd.DataFrame(mrows)
+    drows = []
+    for m in models:
+        if (m, TCN_SENS, "accuracy") not in boots:
+            continue
+        for k in tm.METRICS:
+            v = table[(table.model == m) & (table.metric == k)].set_index("method")["value"]
+            lo, hi = percentile_ci(boots[(m, TCN_SENS, k)] - boots[(m, TCN, k)])
+            drows.append({"model": m, "metric": k, "registered": v[TCN],
+                          "sensitivity": v[TCN_SENS],
+                          "sensitivity_minus_registered": v[TCN_SENS] - v[TCN],
+                          "ci_low": lo, "ci_high": hi, "n_boot": len(counts)})
+    return table, pd.DataFrame(mrows), pd.DataFrame(drows)
 
 
 def main() -> None:
@@ -247,6 +284,8 @@ def main() -> None:
         for m in args.models:
             if not (temporal_dir(m) / "selection.json").exists():
                 sys.exit(f"{m}: no selection; run --split val first")
+            if not (temporal_dir(m) / SENS_SELECTION).exists():
+                sys.exit(f"{m}: no {SENS_SELECTION}; run scripts/select_tcn_sensitivity.py")
     stamp = dt.datetime.now()
     label = LABEL[args.split]
     out = (ROOT / "results" / "dev" / f"temporal_val_{stamp:%Y%m%d-%H%M%S}"
@@ -263,7 +302,7 @@ def main() -> None:
             done = list(pool.map(_run, jobs))
     infos = {d["model"]: d["info"] for d in done}
     counts = resample_counts(len(EVAL_VIDEOS[args.split]), B_DESCRIPTIVE, BOOT_SEED)
-    table, backbone_mean = summarise(done, counts)
+    table, backbone_mean, sens_diff = summarise(done, counts)
     sel = pd.DataFrame([r | {"model": d["model"]} for d in done for r in d["sel_rows"]]) \
         if args.split == "val" else pd.DataFrame(
             [{"model": d["model"], "method": "ma-causal", "param": "w",
@@ -272,7 +311,10 @@ def main() -> None:
                 "value": d["selection"]["w_centred"]} for d in done]
             + [{"model": d["model"], "method": "tcn-causal", "param": "depth,epoch",
                 "seed": s, "value": f"{v['depth']},{v['epoch']}"}
-               for d in done for s, v in d["selection"]["tcn"].items()])
+               for d in done for s, v in d["selection"]["tcn"].items()]
+            + [{"model": d["model"], "method": TCN_SENS, "param": "depth,epoch",
+                "seed": s, "value": f"{v['depth']},{v['epoch']}"}
+               for d in done for s, v in d["info"]["sensitivity_tcn"].items()])
     tables = {"temporal_summary": table, "temporal_backbone_mean_gain": backbone_mean,
               "temporal_selection": sel}
     if args.split == "val":
@@ -281,11 +323,13 @@ def main() -> None:
         tables["temporal_ma_grid"] = pd.concat(
             [pd.DataFrame(d["info"].pop("ma_grid")).assign(model=d["model"]) for d in done],
             ignore_index=True)
+    if len(sens_diff):
+        tables["temporal_tcn_sensitivity"] = sens_diff
     for name, df in tables.items():
         df = df.copy()
         if "model" in df and df.columns[0] != "model":
             df.insert(0, "model", df.pop("model"))
-        df.insert(0, "label", label)
+        df.insert(0, "label", SENS_LABEL if name == "temporal_tcn_sensitivity" else label)
         df.to_csv(out / f"{name}.csv", index=False)
     run = {"label": label, "split": args.split, "models": args.models,
            "boot": B_DESCRIPTIVE, "seed": BOOT_SEED, "git_hash": ghash,
@@ -300,12 +344,16 @@ def main() -> None:
         date = stamp.date().isoformat()
         common = dict(split="test", git_hash=ghash, date=date)
         rows = []
+        def setting_seed(method):
+            for group, setting in ((TCN_SENS, SENS_SETTING), (TCN, TCN)):
+                if method.startswith(f"{group}-seed"):
+                    return setting, method.removeprefix(f"{group}-seed")
+                if method == group:
+                    return setting, "mean(0,1,2)"
+            return method, BOOT_SEED
+
         for r in table.itertuples():
-            if r.method.startswith("tcn-causal-seed"):
-                setting, seed = "tcn-causal", r.method.removeprefix("tcn-causal-seed")
-            else:
-                setting = r.method
-                seed = "mean(0,1,2)" if r.method == "tcn-causal" else BOOT_SEED
+            setting, seed = setting_seed(r.method)
             rows.append({"model": r.model, "metric": f"temporal_{r.metric}", "value": r.value,
                          "ci_low": r.ci_low, "ci_high": r.ci_high, "n_boot": r.n_boot,
                          "setting": setting, "seed": seed})
@@ -313,17 +361,23 @@ def main() -> None:
                 rows.append({"model": r.model, "metric": f"temporal_{r.metric}_gain_over_single_frame",
                              "value": r.gain, "ci_low": r.gain_ci_low, "ci_high": r.gain_ci_high,
                              "n_boot": r.n_boot, "setting": setting, "seed": seed})
-            if r.method == "tcn-causal":
+            if r.method in (TCN, TCN_SENS):
                 rows.append({"model": r.model, "metric": f"temporal_{r.metric}_sd_over_seeds",
                              "value": r.sd_over_seeds, "setting": setting, "seed": seed})
         for r in backbone_mean.itertuples():
-            if r.method.startswith("tcn-causal-seed") or r.method == "single-frame":
+            if "-seed" in r.method or r.method == "single-frame":
                 continue
+            setting, seed = setting_seed(r.method)
             rows.append({"model": "mean over backbones",
                          "metric": f"temporal_{r.metric}_gain_over_single_frame",
                          "value": r.mean_gain, "ci_low": r.ci_low, "ci_high": r.ci_high,
-                         "n_boot": r.n_boot, "setting": r.method,
-                         "seed": "mean(0,1,2)" if r.method == "tcn-causal" else BOOT_SEED})
+                         "n_boot": r.n_boot, "setting": setting, "seed": seed})
+        for r in sens_diff.itertuples():
+            rows.append({"model": r.model,
+                         "metric": f"temporal_{r.metric}_sensitivity_minus_registered",
+                         "value": r.sensitivity_minus_registered, "ci_low": r.ci_low,
+                         "ci_high": r.ci_high, "n_boot": r.n_boot, "setting": SENS_SETTING,
+                         "seed": "mean(0,1,2)"})
         new = pd.DataFrame(rows).assign(**common)
         # append only: re-writing would re-format the registered rows' floats (trap 16)
         header = list(pd.read_csv(results, nrows=0).columns)
@@ -342,6 +396,10 @@ def main() -> None:
         print("\ngain over single frame, mean over backbones:")
         print(backbone_mean.pivot_table(index="method", columns="metric", values="mean_gain",
                                         sort=False).reindex(columns=list(tm.METRICS)).to_string())
+    if len(sens_diff):
+        with pd.option_context("display.width", 220, "display.float_format", "{:.4f}".format):
+            print(f"\n*** {SENS_LABEL} ***")
+            print(sens_diff.to_string(index=False))
     for m, i in infos.items():
         print(f"{m}: {i['seconds']} s, peak RSS {i['peak_rss_mb']} MB, "
               f"HMM floored {i['hmm_floored']}, TCN RF {i['tcn_receptive_field_s']}")
