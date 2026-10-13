@@ -239,3 +239,35 @@ def test_zero_shot_matches_registered_evaluation():
     truth = probe.phase_labels(man)
     for name, pred in probe.zero_shot_phase_predictions(emb, text).items():
         assert (pred == truth).mean() == pytest.approx(ref.loc[name, "accuracy"], abs=1e-15)
+
+
+def test_sensitivity_grid_extends_registered_grid(pool, selected):
+    """Extended grid (not registered): the registered fits are reproduced exactly, and a
+    tool whose choice stays on the registered grid keeps its registered head."""
+    X, man = pool
+    _, _, tools, tinfos = selected
+    assert probe.C_GRID_SENSITIVITY[:len(probe.C_GRID)] == probe.C_GRID
+    tools_s, infos_s = probe.select_tool_probes(X, man, grid=probe.C_GRID_SENSITIVITY)
+    assert len(infos_s) == len(probe.C_GRID_SENSITIVITY) * len(TOOL_COLUMNS)
+    reg = {(i.head, i.C): i.val_score for i in tinfos}
+    for i in infos_s:
+        if i.C in probe.C_GRID:
+            assert i.val_score == reg[(i.head, i.C)]
+    for t in TOOL_COLUMNS:
+        if tools_s[t].C in probe.C_GRID:
+            assert tools_s[t].C == tools[t].C
+            np.testing.assert_array_equal(tools_s[t].coef, tools[t].coef)
+
+
+def test_evaluate_tools_matches_evaluate_probe(pool, selected):
+    X, man = pool
+    phase, _, tools, _ = selected
+    val = _mask(man, 33, 40)
+    Xv, mv = X[val], man[val].reset_index(drop=True)
+    counts = resample_counts(8, 15)
+    ev = probe.evaluate_probe("fake", phase, tools, Xv, mv, {"r1": np.zeros(len(mv), int)},
+                              counts)
+    per_tool, tmap, boot = probe.evaluate_tools(tools, Xv, mv, counts)
+    pd.testing.assert_frame_equal(per_tool, ev.per_tool)
+    assert tmap == ev.point["tool_map"]
+    np.testing.assert_array_equal(boot, ev.boot["tool_map"])

@@ -8,6 +8,9 @@
 * **Tools:** one binary logistic regression per tool, same grid and settings; C is
   selected per tool by AP on 33-40.
 * Ties in the selection score go to the smaller C (the first in grid order).
+* Sensitivity analysis, **not registered** (Deviations, 2026-10-13): the tool heads
+  re-selected over ``C_GRID_SENSITIVITY``, the grid extended with 1e3 and 1e4, all else
+  identical. Phase heads stay on the registered grid. The primary analysis is unchanged.
 
 Every fit goes through ``fit_head``, which refuses any row that is not a Cholec80
 training video (1-32) and calls ``assert_no_test_leakage`` first. Validation and test
@@ -42,6 +45,7 @@ from srb.datasets.overlap import (CHOLEC80_TRAIN_IDS, CHOLEC80_VAL_IDS,
 from srb.metrics import average_precision
 
 C_GRID = (1e-3, 1e-2, 1e-1, 1.0, 10.0, 100.0)
+C_GRID_SENSITIVITY = C_GRID + (1e3, 1e4)  # tool heads only; not registered
 MAX_ITER = 5000
 _CHUNK = 16384  # rows per float64 matmul, to bound memory on an 8 GB machine
 
@@ -152,9 +156,10 @@ def select_phase_probe(X: np.ndarray, manifest: pd.DataFrame
     return heads[_best([i.val_score for i in infos])], infos
 
 
-def select_tool_probes(X: np.ndarray, manifest: pd.DataFrame
+def select_tool_probes(X: np.ndarray, manifest: pd.DataFrame, grid: tuple = C_GRID
                        ) -> tuple[dict[str, LinearHead], list[FitInfo]]:
-    """One binary head per tool: fit on 1-32 for every C, select by AP on 33-40."""
+    """One binary head per tool: fit on 1-32 for every C in ``grid``, select by AP on
+    33-40. ``grid`` is ``C_GRID`` except in the sensitivity analysis."""
     train, val = _split_masks(manifest)
     assert_no_test_leakage(manifest[val])
     selected, infos = {}, []
@@ -163,7 +168,7 @@ def select_tool_probes(X: np.ndarray, manifest: pd.DataFrame
         if y[train].all() or not y[train].any():
             raise ValueError(f"{tool}: needs positive and negative training frames")
         heads, tool_infos = [], []
-        for C in C_GRID:
+        for C in grid:
             head, info = fit_head(X[train], y[train].astype(np.int64), manifest[train], C, tool)
             info.val_score = float(average_precision(head.decision(X[val])[:, 0], y[val]))
             heads.append(head)
@@ -246,7 +251,6 @@ def evaluate_probe(model: str, phase: LinearHead, tools: dict[str, LinearHead],
     (``srb.resample.resample_counts``); every model gets the same one.
     """
     from srb.evaluation import _f1_macro_from_confusion
-    from srb.resample import SortedQuery, ap_from_groups
 
     truth = phase_labels(manifest)
     videos = np.sort(manifest["video_id"].unique())
@@ -282,6 +286,21 @@ def evaluate_probe(model: str, phase: LinearHead, tools: dict[str, LinearHead],
     boot["zs_phase_accuracy"] = np.mean(zs_boot, 0)
     boot["gain_over_zs_accuracy"] = boot["phase_accuracy"] - boot["zs_phase_accuracy"]
 
+    per_tool, point["tool_map"], boot["tool_map"] = evaluate_tools(tools, X, manifest,
+                                                                   counts)
+    return ProbeEval(model, point, per_tool, boot, post)
+
+
+def evaluate_tools(tools: dict[str, LinearHead], X: np.ndarray, manifest: pd.DataFrame,
+                   counts: np.ndarray) -> tuple[pd.DataFrame, float, np.ndarray]:
+    """Per-tool AP of the decision values, the tool mAP, and its (B,) bootstrap values
+    on the resamples ``counts`` (videos in sorted order)."""
+    from srb.resample import SortedQuery, ap_from_groups
+
+    videos = np.sort(manifest["video_id"].unique())
+    vpos = np.searchsorted(videos, manifest["video_id"].to_numpy())
+    if counts.shape[1] != len(videos):
+        raise ValueError("bootstrap counts do not match the number of videos")
     rows, tool_boot = [], []
     for tool in TOOL_COLUMNS:
         rel = manifest[tool].to_numpy(dtype=bool)
@@ -289,18 +308,16 @@ def evaluate_probe(model: str, phase: LinearHead, tools: dict[str, LinearHead],
         rows.append({"tool": tool, "C": tools[tool].C, "n_relevant": int(rel.sum()),
                      "prevalence": float(rel.mean()), "ap": average_precision(s, rel)})
         sq = SortedQuery(s, rel, vpos)
-        b_ap = np.full(len(m), np.nan)
-        for b in range(len(m)):
+        b_ap = np.full(len(counts), np.nan)
+        for b in range(len(counts)):
             g, r = sq.group_counts(counts[b])
             if r.sum():
                 b_ap[b] = ap_from_groups(g, r)
         tool_boot.append(b_ap)
     per_tool = pd.DataFrame(rows)
-    point["tool_map"] = float(per_tool["ap"].mean())
     tb = np.stack(tool_boot, 1)
     ok = np.isfinite(tb)
-    boot["tool_map"] = np.where(ok, tb, 0).sum(1) / ok.sum(1)
-    return ProbeEval(model, point, per_tool, boot, post)
+    return per_tool, float(per_tool["ap"].mean()), np.where(ok, tb, 0).sum(1) / ok.sum(1)
 
 
 HEADLINE = ("phase_accuracy", "phase_macro_f1", "phase_per_video_accuracy", "tool_map",
@@ -341,3 +358,26 @@ def summarise_probes(evals: dict[str, ProbeEval]) -> tuple[pd.DataFrame, pd.Data
                      "diff": float(pts.max() - pts.min()), "ci_low": float(lo),
                      "ci_high": float(hi), "n_boot": len(bs)})
     return summary, pd.DataFrame(prow)
+
+
+def compare_tool_grids(results: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Sensitivity analysis (not registered). ``results[model]`` holds "primary" and
+    "sensitivity" tuples from ``evaluate_tools`` on the same resamples. Returns per model
+    both tool mAPs with 95% intervals and their paired difference, and per tool both Cs
+    and APs."""
+    from srb.resample import percentile_ci
+
+    rows, per_tool = [], []
+    for model, r in results.items():
+        (pt_p, map_p, boot_p), (pt_s, map_s, boot_s) = r["primary"], r["sensitivity"]
+        for name, v, b in (("tool_map_primary", map_p, boot_p),
+                           ("tool_map_sensitivity", map_s, boot_s),
+                           ("sensitivity_minus_primary", map_s - map_p, boot_s - boot_p)):
+            lo, hi = percentile_ci(b)
+            rows.append({"model": model, "metric": name, "value": v, "ci_low": float(lo),
+                         "ci_high": float(hi), "n_boot": len(b)})
+        per_tool.append(pd.DataFrame({
+            "model": model, "tool": pt_p["tool"], "C_primary": pt_p["C"],
+            "C_sensitivity": pt_s["C"], "ap_primary": pt_p["ap"],
+            "ap_sensitivity": pt_s["ap"]}))
+    return pd.DataFrame(rows), pd.concat(per_tool, ignore_index=True)

@@ -18,6 +18,12 @@ refit, no reselection), scores them on 41-80 (data/index/<model>/videos_41-80), 
 posteriors_videos_41-80.npz, writes the tables to results/test/probe_*.csv and appends
 rows with setting=linear-probe to results/results.csv.
 
+Sensitivity analysis, NOT REGISTERED (Deviations, 2026-10-13): --split test also scores
+the tool heads re-selected over the extended C grid (scripts/select_probe_sensitivity.py,
+data/probe/<model>/probe_tools_sensitivity.npz) on the same resamples, and writes them
+next to the primary tool mAP: results/test/probe_sensitivity_*.csv and results.csv rows
+with setting=linear-probe-sensitivity-not-registered. The primary analysis is unchanged.
+
 Intervals: paired video-level bootstrap, the first 2,000 resamples of
 default_rng(20261011), the same resamples for every model; descriptive (section 4.6).
 The gain over zero-shot uses the r1-r5 zero-shot phase classifiers of section 4.2,
@@ -43,7 +49,8 @@ from srb.datasets.cholec80 import PHASES
 from srb.datasets.overlap import CHOLEC80_TRAIN_IDS
 from srb.index import git_hash, load_index
 from srb.models.registry import _SPECS
-from srb.probe import (C_GRID, MAX_ITER, evaluate_probe, load_probes, phase_labels,
+from srb.probe import (C_GRID, C_GRID_SENSITIVITY, MAX_ITER, compare_tool_grids,
+                       evaluate_probe, evaluate_tools, load_probes, phase_labels,
                        save_probes, select_phase_probe, select_tool_probes, softmax,
                        summarise_probes, zero_shot_phase_predictions)
 from srb.queries import cholec80_queries
@@ -55,6 +62,9 @@ INDEX = {"val": "videos_1-40", "test": "videos_41-80"}
 EVAL_VIDEOS = {"val": list(range(33, 41)), "test": list(range(41, 81))}
 LABEL = {"val": "DEV, videos 33-40 (val split), probe trained on 1-32, NOT A RESULT",
          "test": "RESULT, Cholec80 test videos 41-80"}
+SENS_FILE = "probe_tools_sensitivity.npz"
+SENS_LABEL = ("RESULT, Cholec80 test videos 41-80; SENSITIVITY, NOT REGISTERED "
+              "(tool C grid extended with 1e3, 1e4; Deviations 2026-10-13)")
 REGISTERED_CLS = {"val": "results/dev/registered_val_20261012-220609",
                   "test": "results/test"}
 
@@ -143,9 +153,18 @@ def _run(job) -> dict:
     counts = resample_counts(man["video_id"].nunique(), B_DESCRIPTIVE, BOOT_SEED)
     ev = evaluate_probe(model, phase, tools, X, man, zs, counts)
     ev.posteriors = None  # saved above; not sent back to the parent
+    out = {"model": model, "eval": ev}
+    if split == "test":  # sensitivity, not registered: same rows, same resamples
+        phase_s, tools_s, smeta = load_probes(probe_dir(model) / SENS_FILE)
+        if not (np.array_equal(phase_s.coef, phase.coef) and smeta["revision"] == imeta["revision"]
+                and smeta["tool_C_grid"] == list(C_GRID_SENSITIVITY)):
+            raise SystemExit(f"{model}: {SENS_FILE} does not match the registered probe")
+        out["primary"] = (ev.per_tool, ev.point["tool_map"], ev.boot["tool_map"])
+        out["sensitivity"] = evaluate_tools(tools_s, X, man, counts)
+        info["sensitivity_probe_git_hash"] = smeta["git_hash"]
     info["seconds"] = round(time.time() - t0, 1)
     info["peak_rss_mb"] = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2**20, 1)
-    return {"model": model, "eval": ev, "fits": fits, "info": info}
+    return out | {"fits": fits, "info": info}
 
 
 def main() -> None:
@@ -168,6 +187,8 @@ def main() -> None:
         for m in args.models:
             if not (probe_dir(m) / "probe.npz").exists():
                 sys.exit(f"{m}: no selected probe; run --split val first")
+            if not (probe_dir(m) / SENS_FILE).exists():
+                sys.exit(f"{m}: no {SENS_FILE}; run scripts/select_probe_sensitivity.py")
     stamp = dt.datetime.now()
     label = LABEL[args.split]
     out = (ROOT / "results" / "dev" / f"probe_val_{stamp:%Y%m%d-%H%M%S}"
@@ -204,6 +225,11 @@ def main() -> None:
         json.dumps(run, indent=2) + "\n")
 
     if args.split == "test":
+        sens, sens_tool = compare_tool_grids({d["model"]: d for d in done})
+        for name, df in (("probe_sensitivity_tools", sens),
+                         ("probe_sensitivity_per_tool", sens_tool)):
+            df.insert(0, "label", SENS_LABEL)
+            df.to_csv(out / f"{name}.csv", index=False)
         date = stamp.date().isoformat()
         common = dict(setting="linear-probe", split="test", seed=BOOT_SEED, git_hash=ghash,
                       date=date)
@@ -211,13 +237,23 @@ def main() -> None:
         rows["metric"] = "probe_" + rows["metric"]
         diffs = pairs.rename(columns={"pair": "model", "diff": "value"}).copy()
         diffs["metric"] = "probe_" + diffs["metric"] + "_difference"
-        new = pd.concat([rows.assign(**common), diffs.assign(**common)], ignore_index=True)
+        srows = sens.drop(columns="label").copy()
+        srows["metric"] = "probe_" + srows["metric"]
+        srows = srows[srows["metric"] != "probe_tool_map_primary"]  # already above
+        new = pd.concat([rows.assign(**common), diffs.assign(**common),
+                         srows.assign(**common | {
+                             "setting": "linear-probe-sensitivity-not-registered"})],
+                        ignore_index=True)
         pd.concat([pd.read_csv(results), new], ignore_index=True).to_csv(results, index=False)
 
     print(f"\n*** {label} ***")
     with pd.option_context("display.width", 200, "display.float_format", "{:.4f}".format):
         print(summary.pivot(index="metric", columns="model", values="value").to_string())
         print(pairs.to_string(index=False))
+        if args.split == "test":
+            print(f"\n*** {SENS_LABEL} ***")
+            print(sens.drop(columns="label").to_string(index=False))
+            print(sens_tool.drop(columns="label").to_string(index=False))
         if args.split == "val":
             sel = tables["probe_selection"]
             print("\nfits not converged at max_iter:",
