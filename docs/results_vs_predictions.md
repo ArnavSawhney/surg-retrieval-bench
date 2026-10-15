@@ -18,7 +18,12 @@ experiment on the test split. RQ3 added on 13 October 2026, after the single lin
 test run (`6918ba5`, run at `d57bac8`; probes selected on videos 33–40 at `7077afb`).
 Its numbers were recomputed from `results/test/probe_summary.csv`, the registered
 zero-shot tables `results/test/*_classification.csv`, and the saved test-set phase
-posteriors scored against the labels; all three agree.
+posteriors scored against the labels; all three agree. RQ4 added on 15 October 2026, after
+the single temporal-model test run (`4f489a7`, run at `3bbe61f`; window, HMM and TCN
+selected or fitted on videos 1–40 at `c423454`). Its numbers were recomputed from the
+saved test-set phase posteriors, the saved HMM parameters and TCN weights, and the
+selected windows, scored against the labels on the same 2,000 resamples, and agree with
+`results/test/temporal_summary.csv` and `temporal_backbone_mean_gain.csv`.
 
 ## Test-set numbers used
 
@@ -76,6 +81,26 @@ zero-shot phase accuracy (headline: mean over r1–r5, section 4.2) and the gain
 Best-to-worst spread across the four models: zero-shot 0.2145 [0.1976, 0.2298] (PeskaVLP
 − CLIP); probe 0.0678 [0.0560, 0.0848] (MedSigLIP − PeskaVLP).
 
+RQ4, causal temporal models (section 4.4 and its 2026-10-13 clarification): phase
+accuracy of each causal method on the selected probe's posteriors (TCN on the
+embeddings), and its gain over the single-frame probe in parentheses. The TCN is the mean
+over seeds 0, 1, 2. Intervals: 95% percentile, paired video-level bootstrap, the first
+2,000 resamples (descriptive).
+
+| model | single frame | moving average, causal (w) | HMM, forward | TCN, causal (mean of 3 seeds ± SD) |
+|---|---|---|---|---|
+| CLIP ViT-L/14 | 0.6839 | 0.7638 (+0.0799), w = 30 | 0.7394 (+0.0555) | 0.6964 ± 0.0029 (+0.0124) |
+| SigLIP so400m-384 | 0.7341 | 0.8008 (+0.0667), w = 20 | 0.7842 (+0.0502) | 0.7354 ± 0.0173 (+0.0014) |
+| MedSigLIP-448 | 0.7383 | 0.8020 (+0.0636), w = 20 | 0.7654 (+0.0271) | 0.7536 ± 0.0121 (+0.0153) |
+| PeskaVLP | 0.6706 | 0.7561 (+0.0855), w = 30 | 0.7324 (+0.0618) | 0.7317 ± 0.0063 (+0.0611) |
+| **mean gain over models [95% CI]** | — | **+0.0739 [+0.0661, +0.0812]** | +0.0487 [+0.0319, +0.0653] | +0.0225 [+0.0090, +0.0368] (± 0.0039 over seeds) |
+
+Paired differences of the mean gain over models (same resamples): moving average − HMM
++0.0253 [+0.0042, +0.0466]; HMM − TCN +0.0261 [+0.0103, +0.0419]; moving-average gain −
+single-frame probe spread +0.0062 [−0.0101, +0.0172], with the gain at least as large as
+the spread on 70% of the resamples. Macro-F1, Jaccard and edit score (no prediction,
+section 5) are in `results/test/temporal_summary.csv`.
+
 ## Verdicts
 
 | ID | Prediction (section 5, verbatim) | Test-set number | Verdict | Deciding rule (section 5) |
@@ -90,7 +115,9 @@ Best-to-worst spread across the four models: zero-shot 0.2145 [0.1976, 0.2298] (
 | RQ3a | PeskaVLP's linear-probe phase accuracy is **between 60% and 75%**. *Falsified if* it is outside that range. | 0.6706 (67.1%) | **holds** | inside 60–75% |
 | RQ3b | the probe adds **20 to 35 points** over PeskaVLP's zero-shot phase accuracy (headline over r1–r5, section 4.2). The published gain is about 25 points with clinician-written prompts; the headline here averages five untuned rephrasings, so zero-shot accuracy is expected to be lower and the gain at least as large. *Falsified if* the gain is outside 20–35 points. | 0.6706 − 0.3459 = +0.3247 (32.5 points) | **holds** | inside 20–35 points |
 | RQ3c | the probe **narrows** the gap between backbones but PeskaVLP stays on top. The spread between the best and worst backbone in probe phase accuracy is **smaller** than the spread in zero-shot phase accuracy, and PeskaVLP has the highest probe accuracy. *Falsified if* the spread does not shrink, or another backbone has a higher probe accuracy. | spread 0.2145 (zero-shot) → 0.0678 (probe); PeskaVLP's probe accuracy 0.6706 is the **lowest** (MedSigLIP 0.7383, SigLIP 0.7341, CLIP 0.6839) | **falsified** | the spread shrinks, but three other backbones have a higher probe accuracy |
-| RQ4a–c | temporal context (gain, best causal method, gain vs backbone spread). | — | pending | — |
+| RQ4a | the best causal temporal method adds **3 to 8 accuracy points** over the single-frame probe, averaged over the backbones. *Falsified if* the gain is below 3 or above 8 points. | best causal method: moving average, +0.0739 (7.4 points) [+0.0661, +0.0812] | **holds** | inside 3–8 points |
+| RQ4b | the **HMM (forward filtering)** gives the largest gain among the causal methods (moving average, HMM, TCN). *Falsified if* the causal moving average or the TCN gives a larger average gain. | moving average +0.0739 > HMM +0.0487 > TCN +0.0225 | **falsified** | the causal moving average gives a larger average gain |
+| RQ4c | choosing the backbone matters more than temporal context. The temporal gain in RQ4a is **smaller** than the spread in single-frame probe accuracy between the best and worst backbone. *Falsified if* it is equal or larger. | gain 0.0739 vs spread 0.0678 (MedSigLIP − PeskaVLP) | **falsified** | the gain is larger than the spread (point estimates) |
 | RQ5a–c | failure modes (largest artefact drop, its size, PeskaVLP robustness). | — | pending | — |
 
 Notes on the verdicts:
@@ -121,6 +148,25 @@ Notes on the verdicts:
   [0.6438, 0.6974]; gain [+0.3027, +0.3452]). PeskaVLP's gain is the smallest of the
   four (the others gain +0.55 to +0.59): it starts from the highest zero-shot accuracy
   and ends at the lowest probe accuracy.
+* **RQ4 and the TCN sensitivity analysis.** The TCN re-selected over depths 2–8 and up
+  to 100 epochs (Deviations, 2026-10-13; `setting = tcn-causal-sensitivity-not-registered`,
+  `results/test/temporal_tcn_sensitivity.csv`) is not registered and is not part of any
+  verdict. Every RQ4 verdict uses the registered TCN (depths 2–4, at most 50 epochs).
+  The offline methods (centred moving average, Viterbi) are registered as secondary and
+  are not causal, so they do not enter RQ4a–c either.
+* **RQ4a.** "Best" is the causal method with the largest mean accuracy gain over the
+  four backbones; that is the moving average, which also has the largest gain on each
+  backbone. The point estimate is inside 3–8 points; the upper end of its descriptive
+  interval (8.1 points) is just above 8.
+* **RQ4b.** The moving average beats the HMM on all four backbones, and the interval of
+  their paired difference excludes zero. The TCN is last on average; on PeskaVLP the HMM
+  and TCN gains are almost equal (+0.0618 vs +0.0611).
+* **RQ4c** fails on the point estimates, which is the rule, but only narrowly: 0.0739
+  against 0.0678. The descriptive intervals overlap heavily (gain [0.0661, 0.0812],
+  spread [0.0560, 0.0848]), and the interval of the paired difference, +0.0062
+  [−0.0101, +0.0172], includes zero. The best causal temporal gain and the choice of
+  backbone are about equal in size. (The spread is best minus worst on each resample,
+  as in RQ3c.)
 
 ## Other registered checks
 
