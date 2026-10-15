@@ -5,13 +5,13 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 13 Oct 2026 (Week 5: RQ4, pulled forward from plan Weeks 6–7).
+**Last updated:** 15 Oct 2026 (Week 5 done: RQ4, pulled forward from plan Weeks 6–7).
 **`prereg-v1` = `ff2b6e5`**, on GitHub since 2026-10-12T14:02:13Z.
-**Status:** RQ1/RQ2 (`c1ed8ed`) and RQ3 (`6918ba5`) run once on the test split and compared
-with the predictions in `docs/results_vs_predictions.md`. Week 5: section 4.4 clarified
+**Status:** RQ1/RQ2 (`c1ed8ed`), RQ3 (`6918ba5`) and RQ4 (`4f489a7`) run once on the test split
+and compared with the predictions in `docs/results_vs_predictions.md`. Week 5: section 4.4 clarified
 under Deviations (`eebebfe`), temporal models implemented (`c423454`), **validation run
 done (dev)**; TCN sensitivity analysis (not registered, `3bbe61f`); **RQ4 test run done
-once** at `3bbe61f` (not compared with the predictions). RQ5 tagging tool built (`c75e985`);
+once** at `3bbe61f`; RQ4 verdicts in `9303cff` (RQ4a holds, RQ4b and RQ4c falsified). RQ5 tagging tool built (`c75e985`);
 no pool frame tagged. No GPU spend since Week 3.
 
 Start a new session by reading the local, git-excluded planning notes (see `.git/info/exclude`)
@@ -383,16 +383,20 @@ Week 5 (LOG.md, 13 Oct):
    `hmm-viterbi`, `tcn-causal` with `seed` = 0, 1, 2 and `mean(0,1,2)`, and
    `tcn-causal-sensitivity-not-registered`); tables `results/test/temporal_*.csv`.
    Sensitivity: `scripts/select_tcn_sensitivity.py` (dev,
-   `results/dev/tcn_sensitivity_val_20261013-213707`). RQ4 vs predictions: only when
-   Arnav asks, and only the registered TCN counts.
+   `results/dev/tcn_sensitivity_val_20261013-213707`). Pushed (`4f489a7`).
+6. **Done** (`9303cff`, 15 Oct): RQ4 in `docs/results_vs_predictions.md`, registered
+   methods only (the TCN sensitivity and the offline methods are in no verdict).
+   RQ4a holds (+0.0739, inside 3–8 points); RQ4b falsified (moving average > HMM > TCN);
+   RQ4c falsified on point estimates (0.0739 ≥ spread 0.0678; paired difference
+   +0.0062 [−0.0101, +0.0172], about equal).
 5. **Done** (`c75e985`): RQ5 tagging tool `scripts/tag_rq5.py` (image only, pool order,
    saves every frame). Arnav does the pool tagging:
    `.venv/bin/python scripts/tag_rq5.py` → http://127.0.0.1:8765; tags go to
    `data/rq5/tags.csv`.
 
 Rules that still bind: the pre-registration is frozen (changes only under `## Deviations`,
-shown to Arnav first); **no rerun of the RQ1/RQ2 test split**; no verdicts on RQ3–RQ5
-until Arnav asks (RQ4 included); the optional image-only encoder can only be exploratory now (LOG.md,
+shown to Arnav first); **no rerun of the RQ1/RQ2 test split**; no RQ5 verdict
+until Arnav asks; the optional image-only encoder can only be exploratory now (LOG.md,
 Parked).
 
 **Test scoring is unlocked** (`1759cb4`, after `ff2b6e5`): `evaluate()` and
@@ -410,7 +414,7 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 
 * GPU spend so far is in §1b (two L4 sessions, Week 3, ₹230.07); no instance is running,
   and none is needed in Weeks 4–5.
-* Approve pushing the RQ4 results; tag the RQ5 pool with `scripts/tag_rq5.py`.
+* Tag the RQ5 pool with `scripts/tag_rq5.py`.
 * Close VS Code and Chrome before any Mac indexing (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
   Endoscapes waits until Week 8 (decided 12 Oct).

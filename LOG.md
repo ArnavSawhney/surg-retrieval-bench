@@ -265,6 +265,18 @@ single frame, mean over the four backbones: MA causal +0.074 [0.066, 0.081], HMM
 +0.049 [0.032, 0.065], TCN +0.023 [0.009, 0.037] (sensitivity TCN +0.041 [0.025, 0.058];
 MA centred +0.102, Viterbi +0.061). Not compared with the predictions.
 
+### 2026-10-15 — Week 5 close: RQ4 against the predictions
+
+Pushed `3bbe61f..4f489a7` (RQ4 test results). At Arnav's request, RQ4 added to
+`docs/results_vs_predictions.md` (`9303cff`), recomputed from the saved test posteriors,
+HMM parameters, TCN weights and selected windows on the same 2,000 resamples (all agree
+with `results/test/temporal_*.csv`). Registered methods only: **RQ4a holds** (best causal
+method = causal moving average, mean gain +0.0739 [0.0661, 0.0812], inside 3–8 points),
+**RQ4b falsified** (moving average +0.0739 > HMM forward +0.0487 > TCN +0.0225),
+**RQ4c falsified** on point estimates (gain 0.0739 ≥ single-frame spread 0.0678), but
+narrowly: paired gain − spread +0.0062 [−0.0101, +0.0172], so the two are about equal.
+The TCN sensitivity analysis and the offline methods are in no verdict. Week 5 done.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
