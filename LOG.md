@@ -297,6 +297,30 @@ pass over frames 0–435 that records only "out of body: yes/no" in a separate f
 `data/rq5/tags_corrected.csv`. The raw tags are untouched. No per-tag metric had been
 computed and no model output had been seen. Deviations entry to follow.
 
+### 2026-10-18 — RQ5: out-of-body review finished; corrected tags built
+
+Deviations entry committed (`84b7ec7`, approved as written); guide change log updated
+(`f33a351`: the correction also zeroes smoke, glare and blood, superseding the earlier
+wording). Tool changes: `ece1f22`.
+
+Review pass (`tag_rq5.py --review-out-of-body`, image only): 436 of 436 frames
+answered, 18 Oct 20:19–23:04 IST, **finished before tagging resumed** (last raw tag
+20:00 IST; the tool refuses to tag until the review is complete). **7 out of body**,
+tag_order (video, 25 fps frame index): 12 (51, 3575), 225 (50, 26875), 235 (43, 10575),
+272 (78, 15725), 356 (77, 1250), 405 (57, 59300), 423 (78, 4550). Raw tags of these:
+occlusion 6, blur 2, no smoke, glare or blood.
+
+`scripts/rq5_apply_corrections.py` (not tracked: `data/rq5/`):
+
+* `out_of_body.csv` SHA-256 `f5e96207afc1cbafebe3920f868b00313a0cc07ad7397bf7606660d16276233f`
+* `tags_corrected.csv` SHA-256 `3bb263882a784aab4d7706d942b4637f05ac3db98370bc6f23fb3c2c278d2a33`
+* raw `tags.csv` unchanged (`750483…d732a6`).
+
+Tag counts, raw → corrected (436 frames): smoke 25 → 25, blur 111 → 111, glare 35 → 35,
+blood 35 → 35, occlusion 69 → 63, clean 235 → 240. Stopping rule on the corrected tags:
+not met (smoke 25, glare 35 and blood 35 are below 50). Counts only; no per-tag metric
+computed.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
