@@ -144,3 +144,8 @@ guide unchanged and nothing else: no model output and no tags of yours.
   clean is set to 1 if no other artefact tag remains. The raw tags are kept unchanged
   in `data/rq5/tags.csv`, with a backup copy, and the corrections live in a separate
   file. No per-tag metric had been computed and no model output had been seen.
+* **2026-10-18, correction rule for out-of-body frames.** For frames marked out of body
+  in the review, **smoke, glare and blood are also set to 0**, not only occlusion; blur
+  is kept, and clean is set to 1 if blur is not set. This is consistent with the "Out of
+  body" section above (smoke, glare and blood are tagged only inside the abdomen) and
+  **supersedes** the wording of the entry above, which mentioned only occlusion.
