@@ -277,6 +277,26 @@ method = causal moving average, mean gain +0.0739 [0.0661, 0.0812], inside 3–8
 narrowly: paired gain − spread +0.0062 [−0.0101, +0.0172], so the two are about equal.
 The TCN sensitivity analysis and the offline methods are in no verdict. Week 5 done.
 
+### 2026-10-18 — RQ5 tagging: guide committed after 436 frames; out-of-body issue
+
+Frames 0–435 of the RQ5 pool (`docs/rq5_frame_pool.csv`) were tagged by Arnav between
+15 Oct 23:45 IST (first tag) and 18 Oct 20:00 IST. Raw tags `data/rq5/tags.csv` (436
+frames, not tracked) and the backup `data/rq5/tags_raw_backup_20261018_436frames.csv`
+both have SHA-256 `750483857807963d270812ab1696242186d6e105004772d83ec5070f50d732a6`;
+neither file is ever modified.
+
+The tagging guide `docs/rq5_tagging_guide.md` was written on 15 Oct (file saved 23:38
+IST), before the first tag, but **committed only on 18 Oct, after 436 frames**
+(`091a67a`). The committed version adds the out-of-body rule and its change log.
+
+**Out-of-body issue.** Frames with the camera outside the patient (operating room, hands,
+drapes, black screen) had been tagged **occlusion**, although the pre-registration's
+occlusion is instrument occlusion inside the abdomen. Handled by an image-only review
+pass over frames 0–435 that records only "out of body: yes/no" in a separate file
+(`data/rq5/out_of_body.csv`); corrected tags are derived from raw tags + review into
+`data/rq5/tags_corrected.csv`. The raw tags are untouched. No per-tag metric had been
+computed and no model output had been seen. Deviations entry to follow.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
