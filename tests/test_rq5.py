@@ -107,3 +107,55 @@ def test_next_frame_follows_the_pool_order():
     with pytest.raises(ValueError, match="prefix"):
         next_frame(pool, bad)
     assert next_frame(pool, _tagged([[0] * 5 + [1]] * 10)) is None
+
+
+# ---- out of body ---------------------------------------------------------------------
+
+from srb.rq5 import (OUT_OF_BODY_COLUMNS, apply_corrections, out_of_body_flags,  # noqa: E402
+                     raw_prefix_sha256, reviewed_prefix, tag_values)
+
+
+def test_out_of_body_tags():
+    assert tag_values(set(), out_of_body=True)["clean"] == 1
+    v = tag_values({"blur"}, out_of_body=True)
+    assert (v["blur"], v["clean"]) == (1, 0)
+    for t in ("smoke", "glare", "blood", "occlusion", "clean"):
+        with pytest.raises(ValueError):
+            tag_values({t}, out_of_body=True)
+    assert tag_values({"occlusion"}) == {**dict.fromkeys(TAGS, 0), "occlusion": 1}
+
+
+def _oob(rows):
+    return pd.DataFrame(rows, columns=OUT_OF_BODY_COLUMNS)
+
+
+def test_apply_corrections_rule():
+    tags = pd.DataFrame([[i, 41, 25 * i, *r, "t"] for i, r in enumerate(
+        [[1, 0, 1, 1, 1, 0], [0, 1, 0, 0, 1, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 1, 0]])],
+        columns=TAG_COLUMNS)
+    oob = _oob([[0, 1, "review", "t"], [1, 1, "review", "t"], [2, 0, "review", "t"]])
+    out = apply_corrections(tags, oob)
+    assert out[list(TAGS) + ["out_of_body"]].values.tolist() == [
+        [0, 0, 0, 0, 0, 1, 1],   # smoke, glare, blood, occlusion dropped -> clean
+        [0, 1, 0, 0, 0, 0, 1],   # blur kept -> not clean
+        [0, 0, 0, 0, 1, 0, 0],   # answered no: unchanged
+        [0, 0, 0, 0, 1, 0, 0]]   # no answer: unchanged
+    assert tags["occlusion"].tolist() == [1, 1, 1, 1]  # input not modified
+    with pytest.raises(ValueError, match="untagged"):
+        apply_corrections(tags.iloc[:2], oob)
+    with pytest.raises(ValueError, match="more than one"):
+        out_of_body_flags(_oob([[0, 1, "review", "t"], [0, 0, "tagging", "t"]]))
+    with pytest.raises(ValueError, match="source"):
+        out_of_body_flags(_oob([[0, 1, "guess", "t"]]))
+
+
+def test_reviewed_prefix_and_raw_prefix_hash():
+    assert reviewed_prefix(_oob([[0, 1, "review", "t"], [1, 0, "review", "t"],
+                                 [5, 1, "tagging", "t"]])) == 2
+    with pytest.raises(ValueError, match="prefix"):
+        reviewed_prefix(_oob([[1, 1, "review", "t"]]))
+    raw = b"h\nr0\nr1\nr2\n"
+    assert raw_prefix_sha256(raw, 2) == raw_prefix_sha256(raw + b"r3\n", 2)
+    assert raw_prefix_sha256(raw, 2) != raw_prefix_sha256(raw, 3)
+    with pytest.raises(ValueError, match="fewer"):
+        raw_prefix_sha256(raw, 4)
