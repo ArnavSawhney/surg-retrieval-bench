@@ -646,3 +646,50 @@ selection and every verdict are unchanged, and only the registered TCN is compar
 the RQ4 predictions. The sensitivity numbers are added rows
 (`setting = tcn-causal-sensitivity-not-registered`) and a file
 (`results/test/temporal_tcn_sensitivity.csv`).
+
+### 2026-10-18 — RQ5: out-of-body frames (clarification of section 4.5, review-pass correction, and a secondary analysis, not registered)
+
+**(i) Clarification of section 4.5 (no protocol change).** A frame in which the camera is
+outside the patient (operating room, hands or gloves, drapes, the trocar from outside, a
+black or blank screen) shows none of the five artefacts as section 4.5 means them, so in
+the registered RQ5 analysis it is **clean** ("clean (none)"). If it is also blurred it is
+tagged blur, and it is then not clean. "Instrument occlusion" means an instrument, the
+specimen bag or gauze hiding the anatomy **inside the abdomen**. Hands or the operating
+room filling the screen are not occlusion, and smoke, glare and blood are tagged only
+inside the abdomen. Out of body is not an artefact type: it counts toward no artefact's
+50 frames in the stopping rule. The tagging tool records it as clean (or blur) in the
+tags file plus a flag in a separate file (`data/rq5/out_of_body.csv`).
+
+**(ii) Review-pass correction of frames 0–435.** Frames 0–435 of the pool were tagged
+between 15 October (first tag 23:45 IST) and 18 October 2026, before the tool had an
+out-of-body key. During that tagging, out-of-body frames were tagged occlusion. The raw
+tags are kept unchanged (`data/rq5/tags.csv`, 436 frames, SHA-256
+`750483857807963d270812ab1696242186d6e105004772d83ec5070f50d732a6`, with a backup copy).
+One review pass over frames 0–435, in tag order, shows only the image (no existing tags,
+no labels, no model output) and records only "out of body: yes/no". For frames answered
+yes, smoke, glare, blood and occlusion are set to 0, blur is kept, and clean is set to 1
+if blur is not set (`scripts/rq5_apply_corrections.py`, which writes
+`data/rq5/tags_corrected.csv` and never touches the raw tags). The review is done before
+any per-tag metric is computed. Frames from 436 on are tagged with the out-of-body key
+directly. The stopping rule is counted on the corrected tags; tagging resumes only after
+the review is complete. The tagging guide (`docs/rq5_tagging_guide.md`) was written
+before the first tag (15 October, 23:38 IST) but committed only after 436 frames
+(`091a67a`); the out-of-body rule and this correction are in its change log.
+
+**(iii) Secondary analysis (sensitivity, not registered).** Every per-tag metric of
+section 4.5 (zero-shot phase accuracy, headline over r = 1…5; linear-probe phase
+accuracy; their difference to clean frames; counts only below 20 frames) is repeated
+with out-of-body frames **excluded entirely**: from clean, and from blur if they were
+blurred. It is reported next to the registered analysis, labelled "out of body excluded,
+not registered", and is part of no verdict.
+
+**Test-set numbers seen.** The RQ1/RQ2 (`1759cb4`), RQ3 (`d57bac8`) and RQ4 (`3bbe61f`)
+test-set numbers existed. No RQ5 per-tag metric existed: no model score, prediction or
+accuracy had been computed on or looked at for any tagged pool frame, and none is
+computed before the tags are frozen. The issue was found while tagging, from the images
+only.
+
+**Affects.** RQ5 only. The registered RQ5 analysis and the RQ5a–c verdicts use the
+corrected tags (out-of-body frames as clean, or as blur only). Section 4.5's pool,
+tagging order, stopping thresholds and metrics are unchanged. The secondary analysis
+adds rows and files labelled not registered.
