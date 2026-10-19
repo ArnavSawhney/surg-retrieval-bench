@@ -321,6 +321,27 @@ blood 35 → 35, occlusion 69 → 63, clean 235 → 240. Stopping rule on the co
 not met (smoke 25, glare 35 and blood 35 are below 50). Counts only; no per-tag metric
 computed.
 
+### 2026-10-19 — RQ5 tagging complete: stopping rule met at 816 frames; tags frozen
+
+Tagging resumed after the review (first new tag 18 Oct 23:11 IST) and ran to 19 Oct
+18:18 IST: frames 436–815 (380 new). The stopping rule (section 4.5, on the corrected
+tags) was **first met at the last frame saved, 816 frames** (smoke reached 50 on frame
+815); the tool accepts no more tags. 4 more out-of-body frames were tagged with the
+out-of-body key (tag_order 491, 497, 679, 726), 11 in all.
+
+Tag counts, raw → corrected (816 frames): smoke 50 → 50, blur 211 → 211, glare 69 → 69,
+blood 66 → 66, occlusion 123 → 117, clean 433 → 438. Counts only; no per-tag metric
+computed.
+
+**Frozen tags** (`data/rq5/`, not tracked), SHA-256:
+
+* `tags.csv` (raw, 816 frames) `c741a3f2e4da25b2ac0e79f6c13d65c2da46151cae9c60279c837b19e6881582`;
+  its first 436 rows still hash to `750483…d732a6`
+* `out_of_body.csv` (436 review + 4 tagging answers) `3d4516d749b0d4099a1bd78901c0dcff57519e20b965558f5cc9bdc04228aaea`
+* `tags_corrected.csv` `8be085f776c218080141409e6a935fd325a4bd9b7baf06ec5a4a4f93b1d34ef1`
+
+The RQ5 analysis reads only these files; it has not been run.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
