@@ -1,0 +1,115 @@
+{
+  "label": {
+    "rq5": "RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",
+    "rq5-oob-excluded-not-registered": "RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED"
+  },
+  "git_hash": "854398ddfd3aa67b7dd488ce6b6c481e1aad16b6",
+  "date": "2026-10-19T18:26:43",
+  "boot": 2000,
+  "seed": 20261011,
+  "videos": [
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80
+  ],
+  "n_tagged": 816,
+  "n_out_of_body": 11,
+  "frozen_sha256": {
+    "tags.csv": "c741a3f2e4da25b2ac0e79f6c13d65c2da46151cae9c60279c837b19e6881582",
+    "out_of_body.csv": "3d4516d749b0d4099a1bd78901c0dcff57519e20b965558f5cc9bdc04228aaea",
+    "tags_corrected.csv": "8be085f776c218080141409e6a935fd325a4bd9b7baf06ec5a4a4f93b1d34ef1"
+  },
+  "rows_appended": 284,
+  "wall_s": 4.0,
+  "per_model": {
+    "clip-vit-l14": {
+      "zs_accuracy_check": {
+        "r1": 0.29310344827586204,
+        "r2": 0.09010733853392264,
+        "r3": 0.0989062468175245,
+        "r4": 0.10423243782715848,
+        "r5": 0.07054402509318289
+      },
+      "probe_accuracy_check": 0.683931808460802,
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "revision": "32bd64288804d66eefd0ccbe215aa642df71cc41",
+      "n_frames_41_80": 98194
+    },
+    "siglip-so400m-384": {
+      "zs_accuracy_check": {
+        "r1": 0.17700674175611544,
+        "r2": 0.09865164877691102,
+        "r3": 0.07599242316231135,
+        "r4": 0.26551520459498545,
+        "r5": 0.10281687272134754
+      },
+      "probe_accuracy_check": 0.734077438540033,
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "revision": "9fdffc58afc957d1a03a25b10dba0329ab15c2a3",
+      "n_frames_41_80": 98194
+    },
+    "medsiglip-448": {
+      "zs_accuracy_check": {
+        "r1": 0.36091818237366846,
+        "r2": 0.06065543719575534,
+        "r3": 0.16151699696519137,
+        "r4": 0.2085565309489378,
+        "r5": 0.061123897590484144
+      },
+      "probe_accuracy_check": 0.7383037660142168,
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "revision": "9cea28a1a1195f665105faa6e8544c112fd960a4",
+      "n_frames_41_80": 98194
+    },
+    "peskavlp": {
+      "zs_accuracy_check": {
+        "r1": 0.34342220502271015,
+        "r2": 0.35262847017129356,
+        "r3": 0.3935983868668147,
+        "r4": 0.14318593804102084,
+        "r5": 0.496486547039534
+      },
+      "probe_accuracy_check": 0.6705501354461576,
+      "index_manifest_sha256": "885f81a01c38eb3724bf8afd758524b4e13627e69f12c384fa5b0867184df0ca",
+      "revision": "85e858998eec47614614b89f6af1363e0ad3f47b",
+      "n_frames_41_80": 98194
+    }
+  }
+}

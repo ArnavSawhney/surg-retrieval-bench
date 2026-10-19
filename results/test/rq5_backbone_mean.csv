@@ -1,0 +1,21 @@
+label,setting,model,tag,metric,drop,ci_low,ci_high,n_boot
+"RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",rq5,mean(4 models),smoke,probe_accuracy,0.0914155251141553,-0.030752263816533305,0.2143108289682131,2000
+"RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",rq5,mean(4 models),blur,probe_accuracy,0.12160509857387092,0.05753364328442516,0.18544676353171813,2000
+"RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",rq5,mean(4 models),glare,probe_accuracy,0.029531467143140755,-0.032233732334950436,0.09964501235002576,2000
+"RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",rq5,mean(4 models),blood,probe_accuracy,0.11368825238688254,-0.009624676056251866,0.24307729620021443,2000
+"RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",rq5,mean(4 models),occlusion,probe_accuracy,-0.03559302189439173,-0.09819313547028792,0.039387879948821286,2000
+"RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",rq5,mean(4 models),smoke,zs_accuracy,0.052150684931506826,0.024042912418984534,0.08036905471204776,2000
+"RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",rq5,mean(4 models),blur,zs_accuracy,0.03663409725378172,0.021406226993264325,0.05132647046730264,2000
+"RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",rq5,mean(4 models),glare,zs_accuracy,0.026846337105419872,-0.0046638515196111615,0.05429690549821891,2000
+"RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",rq5,mean(4 models),blood,zs_accuracy,0.05451432129514321,0.025510508433074952,0.07693822838272135,2000
+"RESULT, RQ5 tagged pool frames (Cholec80 test 41-80)",rq5,mean(4 models),occlusion,zs_accuracy,0.04635581313663503,0.02717333520112944,0.06758358776340995,2000
+"RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED",rq5-oob-excluded-not-registered,mean(4 models),smoke,probe_accuracy,0.1038927738927739,-0.01747435519114162,0.2266600267889555,2000
+"RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED",rq5-oob-excluded-not-registered,mean(4 models),blur,probe_accuracy,0.13154827628511837,0.06906142563156258,0.1912295993491524,2000
+"RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED",rq5-oob-excluded-not-registered,mean(4 models),glare,probe_accuracy,0.042008715921759365,-0.01978531939237532,0.11039650841458185,2000
+"RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED",rq5-oob-excluded-not-registered,mean(4 models),blood,probe_accuracy,0.12616550116550115,0.007182113543091678,0.25258649397832755,2000
+"RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED",rq5-oob-excluded-not-registered,mean(4 models),occlusion,probe_accuracy,-0.02311577311577312,-0.08572630278131603,0.051465435606060615,2000
+"RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED",rq5-oob-excluded-not-registered,mean(4 models),smoke,zs_accuracy,0.0545128205128205,0.025408897553654396,0.08361301055243389,2000
+"RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED",rq5-oob-excluded-not-registered,mean(4 models),blur,zs_accuracy,0.03773770089559565,0.02225871107609966,0.052263520125211106,2000
+"RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED",rq5-oob-excluded-not-registered,mean(4 models),glare,zs_accuracy,0.029208472686733544,-0.0023773464541182077,0.05710115139426597,2000
+"RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED",rq5-oob-excluded-not-registered,mean(4 models),blood,zs_accuracy,0.056876456876456885,0.028273734379630135,0.07892420597846381,2000
+"RESULT, RQ5 tagged pool frames, OUT OF BODY EXCLUDED, NOT REGISTERED",rq5-oob-excluded-not-registered,mean(4 models),occlusion,zs_accuracy,0.04871794871794871,0.029346368610171994,0.07034349640446731,2000
