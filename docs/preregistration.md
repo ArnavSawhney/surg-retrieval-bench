@@ -693,3 +693,22 @@ only.
 corrected tags (out-of-body frames as clean, or as blur only). Section 4.5's pool,
 tagging order, stopping thresholds and metrics are unchanged. The secondary analysis
 adds rows and files labelled not registered.
+
+### 2026-10-19 — clarification of RQ5c (no protocol change)
+
+**What is clarified.** RQ5c is judged on the same metric as RQ5a: **linear-probe phase
+accuracy**. A "drop" is the accuracy on clean frames minus the accuracy on frames with
+the tag (positive = worse on the tag). "Averaged over artefact types" is the unweighted
+mean of the drops for smoke, blur, glare, blood and occlusion. Zero-shot drops (headline
+over r = 1…5, section 4.2) are reported as descriptive only. For RQ5a and RQ5b the same
+drop is used, averaged without weights over the four backbones; RQ5b's "that drop" is
+blur's drop, the artefact RQ5a names. A frame with several tags counts in each of them,
+and clean frames are the frames tagged clean in the corrected tags (Deviations entry on
+out-of-body frames, 2026-10-18).
+
+**Test-set numbers seen.** Written before any per-tag metric was computed. The RQ5 tags
+were complete and frozen (816 frames; SHA-256 of the three tag files in `LOG.md`,
+19 October 2026). RQ1–RQ4 test-set numbers existed.
+
+**Affects.** No registered choice changes; this fixes how RQ5c, and the averaging in
+RQ5a and RQ5b, are computed.
