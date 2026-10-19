@@ -177,3 +177,75 @@ def apply_corrections(tags: pd.DataFrame, oob: pd.DataFrame) -> pd.DataFrame:
     out.loc[m, "clean"] = (out.loc[m, "blur"] == 0).astype(int)
     out["out_of_body"] = m.astype(int)
     return out
+
+
+# ---- per-tag analysis (section 4.5; Deviations 2026-10-18 and 2026-10-19) -------------
+
+# The frozen tag files (LOG.md, 2026-10-19); the analysis reads nothing else from data/rq5.
+FROZEN_SHA256 = {
+    "tags.csv": "c741a3f2e4da25b2ac0e79f6c13d65c2da46151cae9c60279c837b19e6881582",
+    "out_of_body.csv": "3d4516d749b0d4099a1bd78901c0dcff57519e20b965558f5cc9bdc04228aaea",
+    "tags_corrected.csv": "8be085f776c218080141409e6a935fd325a4bd9b7baf06ec5a4a4f93b1d34ef1",
+}
+MIN_FRAMES_FOR_ACCURACY = 20  # fewer tagged frames: counts only (section 4.5)
+
+
+def check_frozen(rq5_dir, expected: dict[str, str] = FROZEN_SHA256) -> None:
+    """Every frozen file must hash to its logged SHA-256."""
+    from pathlib import Path
+
+    for name, sha in expected.items():
+        got = hashlib.sha256((Path(rq5_dir) / name).read_bytes()).hexdigest()
+        if got != sha:
+            raise ValueError(f"{name}: SHA-256 {got} differs from the frozen {sha}")
+
+
+def per_tag_accuracy(tags: pd.DataFrame, correct: np.ndarray, videos: np.ndarray,
+                     counts: np.ndarray) -> dict[str, dict]:
+    """Accuracy on the frames of each tag (a frame counts in every one of its tags).
+
+    ``correct`` is (N,) or (N, R) 0/1, row-aligned with ``tags``; with R classifiers
+    the accuracy is the mean over them of each one's pooled accuracy (the zero-shot
+    headline over r1-r5). ``counts`` is the (B, V) multiplicity matrix over ``videos``
+    (sorted). Returns, per tag: n frames, n videos, the point accuracy and its (B,)
+    resampled values; NaN when fewer than MIN_FRAMES_FOR_ACCURACY frames are tagged,
+    and NaN in a resample that draws none of the tag's frames.
+    """
+    c = np.asarray(correct, dtype=np.float64)
+    c = c[:, None] if c.ndim == 1 else c
+    if len(c) != len(tags):
+        raise ValueError("correct is not row-aligned with the tags")
+    vid = tags["video_id"].to_numpy()
+    if not np.isin(vid, videos).all():
+        raise ValueError("tagged frames from videos outside the resampled set")
+    vpos = np.searchsorted(videos, vid)
+    V, m = len(videos), counts.astype(np.float64)
+    out = {}
+    for t in TAGS:
+        sel = tags[t].to_numpy() == 1
+        n = int(sel.sum())
+        n_v = np.bincount(vpos[sel], minlength=V).astype(np.float64)
+        c_v = np.stack([np.bincount(vpos[sel], weights=c[sel, r], minlength=V)
+                        for r in range(c.shape[1])])  # (R, V)
+        if n < MIN_FRAMES_FOR_ACCURACY:
+            value, boot = np.nan, np.full(len(m), np.nan)
+        else:
+            value = float((c_v.sum(1) / n).mean())
+            with np.errstate(invalid="ignore", divide="ignore"):
+                boot = ((m @ c_v.T) / (m @ n_v)[:, None]).mean(1)
+        out[t] = {"n": n, "n_videos": int((n_v > 0).sum()), "value": value, "boot": boot}
+    return out
+
+
+def drops(acc: dict[str, dict]) -> dict[str, dict]:
+    """Drop per artefact: accuracy on clean frames minus accuracy on the tag's frames
+    (positive = worse on the tag), point and per resample (Deviations 2026-10-19)."""
+    cl = acc["clean"]
+    return {a: {"value": cl["value"] - acc[a]["value"], "boot": cl["boot"] - acc[a]["boot"]}
+            for a in ARTEFACTS}
+
+
+def mean_drop(d: dict[str, dict]) -> dict:
+    """Unweighted mean of the five artefacts' drops (RQ5c)."""
+    return {"value": float(np.mean([d[a]["value"] for a in ARTEFACTS])),
+            "boot": np.mean([d[a]["boot"] for a in ARTEFACTS], 0)}
