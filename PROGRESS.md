@@ -5,14 +5,14 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 15 Oct 2026 (Week 5 done: RQ4, pulled forward from plan Weeks 6–7).
+**Last updated:** 19 Oct 2026 (RQ5 tagging complete; RQ5 analysis not run).
 **`prereg-v1` = `ff2b6e5`**, on GitHub since 2026-10-12T14:02:13Z.
 **Status:** RQ1/RQ2 (`c1ed8ed`), RQ3 (`6918ba5`) and RQ4 (`4f489a7`) run once on the test split
 and compared with the predictions in `docs/results_vs_predictions.md`. Week 5: section 4.4 clarified
 under Deviations (`eebebfe`), temporal models implemented (`c423454`), **validation run
 done (dev)**; TCN sensitivity analysis (not registered, `3bbe61f`); **RQ4 test run done
-once** at `3bbe61f`; RQ4 verdicts in `9303cff` (RQ4a holds, RQ4b and RQ4c falsified). RQ5 tagging tool built (`c75e985`);
-no pool frame tagged. No GPU spend since Week 3.
+once** at `3bbe61f`; RQ4 verdicts in `9303cff` (RQ4a holds, RQ4b and RQ4c falsified). RQ5 tagging complete: 816 frames,
+stopping rule met, tags frozen (LOG.md, 19 Oct; out-of-body Deviation `84b7ec7`). No GPU spend since Week 3.
 
 Start a new session by reading the local, git-excluded planning notes (see `.git/info/exclude`)
 — they are the source of truth for scope and hard rules, and they are private: never
@@ -390,9 +390,13 @@ Week 5 (LOG.md, 13 Oct):
    RQ4c falsified on point estimates (0.0739 ≥ spread 0.0678; paired difference
    +0.0062 [−0.0101, +0.0172], about equal).
 5. **Done** (`c75e985`): RQ5 tagging tool `scripts/tag_rq5.py` (image only, pool order,
-   saves every frame). Arnav does the pool tagging:
-   `.venv/bin/python scripts/tag_rq5.py` → http://127.0.0.1:8765; tags go to
-   `data/rq5/tags.csv`.
+   saves every frame). Out-of-body key, image-only review of frames 0–435 and
+   `scripts/rq5_apply_corrections.py` added (`ece1f22`, Deviations `84b7ec7`).
+   **Tagging done** (19 Oct): 816 frames, stopping rule met; 11 out of body. Frozen
+   files and SHA-256s in LOG.md: `data/rq5/tags.csv` (raw), `out_of_body.csv`,
+   `tags_corrected.csv` (what the analysis reads).
+7. **Next, ask Arnav first:** the RQ5 analysis (per-tag metrics on `tags_corrected.csv`,
+   registered, plus the out-of-body-excluded secondary analysis, not registered).
 
 Rules that still bind: the pre-registration is frozen (changes only under `## Deviations`,
 shown to Arnav first); **no rerun of the RQ1/RQ2 test split**; no RQ5 verdict
@@ -414,7 +418,7 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 
 * GPU spend so far is in §1b (two L4 sessions, Week 3, ₹230.07); no instance is running,
   and none is needed in Weeks 4–5.
-* Tag the RQ5 pool with `scripts/tag_rq5.py`.
+* Approve running the RQ5 analysis (tags are frozen).
 * Close VS Code and Chrome before any Mac indexing (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
   Endoscapes waits until Week 8 (decided 12 Oct).
