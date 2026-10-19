@@ -23,7 +23,12 @@ the single temporal-model test run (`4f489a7`, run at `3bbe61f`; window, HMM and
 selected or fitted on videos 1–40 at `c423454`). Its numbers were recomputed from the
 saved test-set phase posteriors, the saved HMM parameters and TCN weights, and the
 selected windows, scored against the labels on the same 2,000 resamples, and agree with
-`results/test/temporal_summary.csv` and `temporal_backbone_mean_gain.csv`.
+`results/test/temporal_summary.csv` and `temporal_backbone_mean_gain.csv`. RQ5 added on
+19 October 2026, after the single per-tag run (`b888322`, run at `854398d`) on the 816
+tagged pool frames, with the tags frozen beforehand (`LOG.md`, 19 October) and RQ5c
+clarified before any per-tag number (Deviations, 2026-10-19, `d85eb56`). Its probe
+numbers were recomputed from the frozen corrected tags and the saved test posteriors on
+the same resamples, and agree with `results/test/rq5_*.csv`.
 
 ## Test-set numbers used
 
@@ -101,6 +106,42 @@ single-frame probe spread +0.0062 [−0.0101, +0.0172], with the gain at least a
 the spread on 70% of the resamples. Macro-F1, Jaccard and edit score (no prediction,
 section 5) are in `results/test/temporal_summary.csv`.
 
+RQ5, failure modes (section 4.5; Deviations 2026-10-18 and 2026-10-19): phase accuracy on
+the 816 tagged pool frames (40 test videos), by tag, using the corrected tags
+(out-of-body frames count as clean, or as blur only). A frame with several tags counts
+in each. **Drop** = accuracy on clean frames − accuracy on the tag's frames (positive =
+worse on the tag). Intervals: 95% percentile, paired video-level bootstrap over the 40
+videos the tagged frames come from, the first 2,000 resamples (descriptive).
+
+Linear-probe phase accuracy on clean frames and drop per artefact (frames; videos):
+
+| model | clean (438; 40) | smoke (50; 25) | blur (211; 38) | glare (69; 29) | blood (66; 15) | occlusion (117; 37) | mean drop, 5 artefacts [95% CI] |
+|---|---|---|---|---|---|---|---|
+| CLIP ViT-L/14 | 0.7694 | +0.1894 | +0.1438 | +0.0593 | +0.0724 | −0.0255 | +0.0879 [+0.0209, +0.1571] |
+| SigLIP so400m-384 | 0.7877 | +0.0477 | +0.1242 | −0.0239 | +0.1210 | −0.0157 | +0.0506 [−0.0292, +0.1299] |
+| MedSigLIP-448 | 0.8105 | +0.0705 | +0.1423 | +0.0279 | +0.0832 | +0.0071 | +0.0662 [−0.0013, +0.1377] |
+| PeskaVLP | 0.6781 | +0.0581 | +0.0762 | +0.0549 | +0.1781 | −0.1082 | +0.0518 [−0.0158, +0.1199] |
+| **mean over models [95% CI]** | — | +0.0914 [−0.0308, +0.2143] | **+0.1216 [+0.0575, +0.1854]** | +0.0295 [−0.0322, +0.0996] | +0.1137 [−0.0096, +0.2431] | −0.0356 [−0.0982, +0.0394] | — |
+
+Paired differences (same resamples): blur − blood +0.0079 [−0.1097, +0.1301]; blur −
+smoke +0.0302 [−0.1070, +0.1683]; blur − glare +0.0921 [+0.0246, +0.1523]; blur −
+occlusion +0.1572 [+0.0856, +0.2147] (mean over models). PeskaVLP's mean drop − CLIP's
+−0.0361 [−0.1144, +0.0464]; − SigLIP's +0.0012 [−0.0932, +0.0917].
+
+Zero-shot phase accuracy (headline over r1–r5), descriptive only (Deviations
+2026-10-19): clean accuracy and mean drop over the five artefacts.
+
+| model | clean | mean drop [95% CI] |
+|---|---|---|
+| CLIP ViT-L/14 | 0.1338 | +0.0074 [−0.0157, +0.0289] |
+| SigLIP so400m-384 | 0.1589 | +0.0398 [+0.0131, +0.0638] |
+| MedSigLIP-448 | 0.1863 | +0.0520 [+0.0226, +0.0793] |
+| PeskaVLP | 0.3936 | +0.0741 [+0.0392, +0.1092] |
+
+Per-artefact zero-shot drops, every per-tag accuracy with its interval, and the secondary
+analysis are in `results/test/rq5_per_tag.csv`, `rq5_backbone_mean.csv`,
+`rq5_mean_drop.csv` and `rq5_pairs.csv`.
+
 ## Verdicts
 
 | ID | Prediction (section 5, verbatim) | Test-set number | Verdict | Deciding rule (section 5) |
@@ -118,7 +159,9 @@ section 5) are in `results/test/temporal_summary.csv`.
 | RQ4a | the best causal temporal method adds **3 to 8 accuracy points** over the single-frame probe, averaged over the backbones. *Falsified if* the gain is below 3 or above 8 points. | best causal method: moving average, +0.0739 (7.4 points) [+0.0661, +0.0812] | **holds** | inside 3–8 points |
 | RQ4b | the **HMM (forward filtering)** gives the largest gain among the causal methods (moving average, HMM, TCN). *Falsified if* the causal moving average or the TCN gives a larger average gain. | moving average +0.0739 > HMM +0.0487 > TCN +0.0225 | **falsified** | the causal moving average gives a larger average gain |
 | RQ4c | choosing the backbone matters more than temporal context. The temporal gain in RQ4a is **smaller** than the spread in single-frame probe accuracy between the best and worst backbone. *Falsified if* it is equal or larger. | gain 0.0739 vs spread 0.0678 (MedSigLIP − PeskaVLP) | **falsified** | the gain is larger than the spread (point estimates) |
-| RQ5a–c | failure modes (largest artefact drop, its size, PeskaVLP robustness). | — | pending | — |
+| RQ5a | **motion blur** gives the largest drop in phase accuracy relative to clean frames, measured on linear-probe phase accuracy averaged over the backbones. *Falsified if* another artefact type gives a larger drop. | blur +0.1216 > blood +0.1137 > smoke +0.0914 > glare +0.0295 > occlusion −0.0356 (211 blurred frames) | **holds** | no other artefact has a larger mean drop |
+| RQ5b | that drop is **small, under 5 points**. *Falsified if* it is 5 points or more. | blur drop +0.1216 (12.2 points) [+0.0575, +0.1854] | **falsified** | 5 points or more |
+| RQ5c | PeskaVLP is **more robust** than the general models: its drop from clean frames, averaged over artefact types, is smaller than both CLIP's and SigLIP's. *Falsified if* it is equal to or larger than either. | mean probe drop: PeskaVLP +0.0518, CLIP +0.0879, **SigLIP +0.0506** | **falsified** | PeskaVLP's drop is larger than SigLIP's (by 0.0012) |
 
 Notes on the verdicts:
 
@@ -167,6 +210,25 @@ Notes on the verdicts:
   [−0.0101, +0.0172], includes zero. The best causal temporal gain and the choice of
   backbone are about equal in size. (The spread is best minus worst on each resample,
   as in RQ3c.)
+* **RQ5 and the out-of-body secondary analysis.** The analysis with the 11 out-of-body
+  frames excluded (Deviations, 2026-10-18 (iii); `setting =
+  rq5-oob-excluded-not-registered`) is not registered and is not part of any verdict.
+  Excluding them raises clean probe accuracy by 0.012–0.014 on every backbone, and every
+  probe drop by 0.006–0.014. Zero-shot drops are descriptive only and enter no verdict
+  (Deviations, 2026-10-19).
+* **RQ5a** holds on the point estimates, but narrowly: blur's lead over blood (+0.0079)
+  and smoke (+0.0302) is small, and the intervals of both paired differences include
+  zero; only glare and occlusion are clearly below blur. Blood frames come from only 15
+  of the 40 videos. Backbone by backbone, blur has the largest drop for SigLIP and
+  MedSigLIP only; smoke is largest for CLIP and blood for PeskaVLP.
+* **RQ5b** fails clearly: the whole interval of blur's drop, [+0.0575, +0.1854], is above
+  5 points.
+* **RQ5c** fails on its second condition only, and by 0.0012 on the point estimates; the
+  interval of PeskaVLP − SigLIP is [−0.0932, +0.0917], so the two are not distinguishable.
+  PeskaVLP's drop is smaller than CLIP's (−0.0361 [−0.1144, +0.0464]). Its mean includes
+  a negative occlusion drop (−0.1082): on occluded frames its probe is more accurate
+  than on clean frames, as is the case, less strongly, for CLIP and SigLIP. In the
+  descriptive zero-shot numbers, PeskaVLP has the largest mean drop of the four.
 
 ## Other registered checks
 
