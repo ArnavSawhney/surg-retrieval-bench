@@ -88,6 +88,18 @@ Download with `bash scripts/download_endoscapes.sh`.
 Role here: a **test-only** second set, for CVS-criteria retrieval and cross-dataset
 generalisation. Use the official splits. Do not train or tune on it.
 
+**Archive contents (read 20 Oct 2026, central directory and label files only).** The zip
+is 6,285,499,749 bytes. Official splits `train/val/test_vids.txt`: 120 / 41 / 40 videos
+(test = public IDs 162–201), disjoint. `train/`, `val/` and `test/` hold 36,694 + 12,372 +
+9,747 = 58,813 JPEGs, one per row of `all_metadata.csv`. `all/` holds 58,585: the **228
+missing frames are all test frames, from videos 190 (144) and 194 (84)**. The same 228 are
+also absent from `test/annotation_coco_vid.json` (9,519 images vs 9,747), but their JPEGs
+are in `test/`. **None of them is a CVS keyframe**, so the evaluated set is unaffected.
+
+**Evaluated frames and relevance** (Deviations, 2026-10-20): the 1,799 CVS keyframes of
+the test videos (`is_ds_keyframe`, = `test/annotation_ds_coco.json`), relevant to C*k* iff
+at least 2 of the 3 annotators marked it achieved. Test R: C1 423, C2 302, C3 501.
+
 ## CholecT50
 
 50 videos with action triplets (instrument, verb, target); Nwoye et al.
