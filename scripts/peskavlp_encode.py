@@ -5,6 +5,7 @@ SurgVLP pins transformers 4.30 / mmengine 0.7 / numpy<2, which clash with the ma
 so PeskaVLP sits behind a process boundary:
 
     .venv-surgvlp/bin/python scripts/peskavlp_encode.py index --videos 1-5
+    .venv-surgvlp/bin/python scripts/peskavlp_encode.py index --dataset endoscapes
     .venv-surgvlp/bin/python scripts/peskavlp_encode.py text --texts q.json --out q.npy
     .venv-surgvlp/bin/python scripts/peskavlp_encode.py smoke
 
@@ -34,7 +35,6 @@ import time
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import torch
 from PIL import Image
 
@@ -43,13 +43,11 @@ sys.path.insert(0, str(ROOT / "src"))  # srb.index etc. need only numpy/pandas/P
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "third_party" / "SurgVLP"))
 
-from build_index import video_tag  # noqa: E402
-from fetch_cholec80_videos import parse_videos  # noqa: E402
+from build_index import DATA_ROOTS, bench, select_frames  # noqa: E402
 from srb.index import (cache_is_valid, embed_frames, git_hash,  # noqa: E402
                        manifest_hash, save_index)
 from srb.models.peskavlp_pins import PESKAVLP  # noqa: E402
 
-DATA = ROOT / "data" / "cholec80"
 SURGVLP = ROOT / "third_party" / "SurgVLP"
 
 
@@ -188,27 +186,29 @@ def cmd_smoke(args) -> None:
 
 
 def cmd_index(args) -> None:
-    videos = parse_videos(args.videos)
-    manifest = pd.read_parquet(DATA / "manifest.parquet")
-    missing = sorted(set(videos) - set(manifest.video_id))
-    if missing:
-        sys.exit(f"videos {missing} are not in the manifest yet; run extract_frames.py")
-    manifest = (manifest[manifest.video_id.isin(videos)]
-                .sort_values(["video_id", "frame_idx_25fps"]).reset_index(drop=True))
+    manifest, root, tag = select_frames(args.dataset, args.videos)
+    videos = sorted(int(v) for v in manifest.video_id.unique())
     mhash = manifest_hash(manifest)
-    out_dir = ROOT / "data" / "index" / "peskavlp" / video_tag(videos)
-    if cache_is_valid(out_dir, PESKAVLP["revision"], mhash) and not args.force:
+    out_dir = ROOT / "data" / "index" / "peskavlp" / tag
+    if (cache_is_valid(out_dir, PESKAVLP["revision"], mhash) and not args.force
+            and not args.bench_only):
         print(f"cached: {out_dir.relative_to(ROOT)} (same revision and manifest); skipping")
         return
 
     enc = PeskaVLP(args.device)
-    paths = [DATA / p for p in manifest.path]
+    paths = [root / p for p in manifest.path]
+    if args.bench_only:
+        _, rates = bench(enc, paths, n=args.bench_frames)
+        print(f"bench only ({args.bench_frames} frames, {enc.device.type}, float32): "
+              f"{rates}; nothing written")
+        return
     print(f"embedding {len(paths)} frames with peskavlp on {enc.device.type}")
     emb, seconds = embed_frames(enc, paths, batch_size=args.batch_size)
     meta = {
         "model": "peskavlp", "hf_id": PESKAVLP["hf_id"], "revision": PESKAVLP["revision"],
         "checkpoint_sha256": PESKAVLP["checkpoint_sha256"],
         "bert_revision": PESKAVLP["bert_revision"],
+        "dataset": args.dataset, "split": sorted(set(manifest.split)),
         "videos": videos, "n_frames": len(emb), "dim": int(emb.shape[1]),
         "storage_dtype": "float16", "manifest_sha256": mhash,
         "git_hash": git_hash(ROOT), "device": enc.device.type, "compute_dtype": "float32",
@@ -231,7 +231,10 @@ def main() -> None:
     t.add_argument("--texts", required=True)
     t.add_argument("--out", required=True)
     i = sub.add_parser("index", help="build data/index/peskavlp/<videos>")
-    i.add_argument("--videos", required=True)
+    i.add_argument("--dataset", choices=sorted(DATA_ROOTS), default="cholec80")
+    i.add_argument("--videos")
+    i.add_argument("--bench-only", action="store_true")
+    i.add_argument("--bench-frames", type=int, default=64)
     i.add_argument("--batch-size", type=int, default=PESKAVLP["default_batch_size"])
     i.add_argument("--force", action="store_true")
     sub.add_parser("smoke", help="plumbing check on synthetic images")
