@@ -49,13 +49,13 @@ def _cholec80_ids(manifest: pd.DataFrame):
 class Query:
     qid: str
     text: str
-    kind: str  # "phase" | "tool" | "negative"
-    target: str | None  # phase name, tool column, or None for a negative control
+    kind: str  # "phase" | "tool" | "cvs" | "negative"
+    target: str | None  # phase name, tool column, CVS relevance column, or None (negative)
 
     def relevant(self, manifest: pd.DataFrame) -> np.ndarray:
         if self.kind == "phase":
             return (manifest["phase"] == self.target).to_numpy()
-        if self.kind == "tool":
+        if self.kind in ("tool", "cvs"):
             return manifest[self.target].to_numpy(dtype=bool)
         if self.kind == "negative":
             return np.zeros(len(manifest), dtype=bool)

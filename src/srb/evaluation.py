@@ -18,7 +18,9 @@ One call of ``evaluate_model`` scores one model on one pool of videos (validatio
 
 Lift for a family is its mAP over the mean prevalence of its targets (the
 random-ranker level of that mAP). The CVS criteria need Endoscapes2023 frames and are
-not part of a Cholec80 pool.
+not part of a Cholec80 pool: an Endoscapes pool is scored with
+``queries=endoscapes_queries()``, which yields the ``cvs`` family only (no overall
+Cholec80 mAP, no confirmatory family, no phase classification; Deviations, 2026-10-20).
 """
 
 from __future__ import annotations
@@ -76,6 +78,17 @@ def expected_distinct_videos(scores: np.ndarray, video: np.ndarray, k: int) -> f
     return out
 
 
+def _family_groups(families: list[str]) -> list[tuple[str, np.ndarray]]:
+    """(name, mask over targets) for each family in order, plus ``overall`` (all 14
+    Cholec80 targets) when the families are exactly phase and tool."""
+    fam = np.asarray(families)
+    names = list(dict.fromkeys(families))
+    groups = [(f, fam == f) for f in names]
+    if names == ["phase", "tool"]:
+        groups.append(("overall", np.ones(len(fam), bool)))
+    return groups
+
+
 def _f1_macro_from_confusion(c: np.ndarray) -> np.ndarray:
     """Macro-F1 over all classes from (..., K, K) confusion counts [true, pred];
     a class with no true and no predicted frame scores 0 (sklearn zero_division=0)."""
@@ -98,15 +111,17 @@ class ModelEval:
 
 
 def evaluate_model(model: str, frame_emb: np.ndarray, manifest: pd.DataFrame,
-                   text_emb: dict[str, np.ndarray], counts: np.ndarray | None) -> ModelEval:
+                   text_emb: dict[str, np.ndarray], counts: np.ndarray | None,
+                   queries: list[Query] | None = None) -> ModelEval:
     """Score one model on the frames of ``manifest`` (row i = ``frame_emb`` row i).
 
     ``text_emb`` maps each query string to its unit-norm text embedding. ``counts`` is
     the (B, V) bootstrap multiplicity matrix over the sorted video IDs of the pool
-    (``srb.resample.resample_counts``), or None to skip the bootstrap.
+    (``srb.resample.resample_counts``), or None to skip the bootstrap. ``queries``
+    defaults to the registered Cholec80 set.
     """
     refuse_test_scoring(_cholec80_ids(manifest))
-    queries = cholec80_queries()
+    queries = cholec80_queries() if queries is None else queries
     pos = [q for q in queries if q.kind != "negative"]
     neg = [q for q in queries if q.kind == "negative"]
     videos = np.sort(manifest.video_id.unique())
@@ -168,13 +183,18 @@ def evaluate_model(model: str, frame_emb: np.ndarray, manifest: pd.DataFrame,
     per_target = pd.DataFrame(trows)
     per_target["lift"] = per_target.ap / per_target.prevalence
 
-    # ---- zero-shot phase classification (4.2) ------------------------------------------
-    truth = pd.Categorical(manifest.phase, categories=PHASES).codes
-    phase_q = {r: [next(q for q in pos if q.kind == "phase" and target_of(q) == f"phase_{p.lower()}"
-                        and role_of(q) == r) for p in PHASES] for r in range(1, N_ROLES + 1)}
-    preds = {f"r{r}": np.argmax(np.stack([score_of[q.qid] for q in qs]), 0)
-             for r, qs in phase_q.items()}
-    preds["ensemble"] = np.argmax(np.stack([ens_scores[f"phase_{p.lower()}"] for p in PHASES]), 0)
+    # ---- zero-shot phase classification (4.2; Cholec80 pools only) ----------------------
+    has_phase = any(q.kind == "phase" for q in pos)
+    preds = {}
+    if has_phase:
+        truth = pd.Categorical(manifest.phase, categories=PHASES).codes
+        phase_q = {r: [next(q for q in pos if q.kind == "phase"
+                            and target_of(q) == f"phase_{p.lower()}" and role_of(q) == r)
+                       for p in PHASES] for r in range(1, N_ROLES + 1)}
+        preds = {f"r{r}": np.argmax(np.stack([score_of[q.qid] for q in qs]), 0)
+                 for r, qs in phase_q.items()}
+        preds["ensemble"] = np.argmax(
+            np.stack([ens_scores[f"phase_{p.lower()}"] for p in PHASES]), 0)
     K, V = len(PHASES), len(videos)
     conf = {}  # classifier -> (V, K, K) per-video confusion counts
     crows = []
@@ -187,7 +207,8 @@ def evaluate_model(model: str, frame_emb: np.ndarray, manifest: pd.DataFrame,
                       "macro_f1": float(f1_score(truth, pred, labels=range(K), average="macro",
                                                  zero_division=0)),
                       "per_video_accuracy": float(per_video_acc.mean())})
-    classification = pd.DataFrame(crows)
+    classification = pd.DataFrame(crows, columns=["classifier", "accuracy", "macro_f1",
+                                                  "per_video_accuracy"])
 
     # ---- calibration (negatives vs positive targets) -------------------------------------
     pos_stats = (per_query[per_query.kind != "negative"].groupby("target", sort=False)
@@ -201,8 +222,7 @@ def evaluate_model(model: str, frame_emb: np.ndarray, manifest: pd.DataFrame,
 
     # ---- summary ----------------------------------------------------------------------
     summary = {"model": model, "n_frames": len(manifest), "n_videos": int(V)}
-    for fam, sel in (("phase", per_target.family == "phase"),
-                     ("tool", per_target.family == "tool"), ("overall", slice(None))):
+    for fam, sel in _family_groups(list(per_target.family)):
         pt = per_target[sel]
         summary.update({
             f"{fam}_map": pt.ap.mean(), f"{fam}_prevalence": pt.prevalence.mean(),
@@ -213,13 +233,14 @@ def evaluate_model(model: str, frame_emb: np.ndarray, manifest: pd.DataFrame,
     summary["rq2_mean_sd"] = per_target.ap_sd.mean()
     for r in range(1, N_ROLES + 1):
         summary[f"role_r{r}_map"] = per_query[per_query.role == r].ap.mean()
-    roles = classification[classification.classifier.str.match(r"r\d")]
-    summary["zs_phase_accuracy"] = roles.accuracy.mean()
-    summary["zs_phase_macro_f1"] = roles.macro_f1.mean()
-    summary["zs_phase_per_video_accuracy"] = roles.per_video_accuracy.mean()
-    ens = classification.set_index("classifier").loc["ensemble"]
-    summary["zs_phase_accuracy_ensemble"] = ens.accuracy
-    summary["zs_phase_macro_f1_ensemble"] = ens.macro_f1
+    if has_phase:
+        roles = classification[classification.classifier.str.match(r"r\d")]
+        summary["zs_phase_accuracy"] = roles.accuracy.mean()
+        summary["zs_phase_macro_f1"] = roles.macro_f1.mean()
+        summary["zs_phase_per_video_accuracy"] = roles.per_video_accuracy.mean()
+        ens = classification.set_index("classifier").loc["ensemble"]
+        summary["zs_phase_accuracy_ensemble"] = ens.accuracy
+        summary["zs_phase_macro_f1_ensemble"] = ens.macro_f1
     summary["calibration_all_negatives_below"] = bool(
         negs.below_every_positive_target_mean.all())
 
@@ -303,17 +324,18 @@ def headline_resamples(ev: ModelEval, confirmatory: bool = False) -> dict[str, n
     else the first 2,000 for everything)."""
     bt = ev.boot
     Bd = len(bt["r_prec"])
-    fam = np.array([t.split("_")[0] for t in ev.target_order])
+    groups = _family_groups([t.split("_")[0] for t in ev.target_order])
     out = {}
     ap_t_all = _target_means(bt["ap"], bt["qids"], ev.target_order)
     if confirmatory:
+        if groups[-1][0] != "overall":
+            raise ValueError("the confirmatory family (overall Cholec80 mAP) needs a Cholec80 pool")
         return {"overall_map": _nanmean(ap_t_all, 1)}
     ap_t = ap_t_all[:Bd]
     rp_t = _target_means(bt["r_prec"], bt["qids"], ev.target_order)
     pv_t = _target_means(bt["per_video_ap"], bt["qids"], ev.target_order)
     prev_t = _target_means(bt["prevalence"], bt["qids"], ev.target_order)
-    for name, sel in (("phase", fam == "phase"), ("tool", fam == "tool"),
-                      ("overall", np.ones(len(fam), bool))):
+    for name, sel in groups:
         out[f"{name}_map"] = _nanmean(ap_t[:, sel], 1)
         out[f"{name}_prevalence"] = _nanmean(prev_t[:, sel], 1)
         out[f"{name}_lift"] = out[f"{name}_map"] / out[f"{name}_prevalence"]
@@ -328,11 +350,12 @@ def headline_resamples(ev: ModelEval, confirmatory: bool = False) -> dict[str, n
     sd = np.stack([_nanstd1(bt["ap"][:Bd, tq == t]) for t in ev.target_order], 1)
     out["rq2_mean_sd"] = _nanmean(sd, 1)
     cls = bt["classification"]
-    role_names = [k for k in cls if k.startswith("r")]
-    for metric in ("accuracy", "macro_f1", "per_video_accuracy"):
-        out[f"zs_phase_{metric}"] = np.mean([cls[k][metric] for k in role_names], 0)
-    out["zs_phase_accuracy_ensemble"] = cls["ensemble"]["accuracy"]
-    out["zs_phase_macro_f1_ensemble"] = cls["ensemble"]["macro_f1"]
+    if cls:
+        role_names = [k for k in cls if k.startswith("r")]
+        for metric in ("accuracy", "macro_f1", "per_video_accuracy"):
+            out[f"zs_phase_{metric}"] = np.mean([cls[k][metric] for k in role_names], 0)
+        out["zs_phase_accuracy_ensemble"] = cls["ensemble"]["accuracy"]
+        out["zs_phase_macro_f1_ensemble"] = cls["ensemble"]["macro_f1"]
     for j, t in enumerate(ev.target_order):
         out[f"target_ap:{t}"] = ap_t[:, j]
     return out
@@ -344,7 +367,8 @@ def summarise(ev: ModelEval) -> pd.DataFrame:
     point = dict(ev.summary)
     point.update({f"target_ap:{t}": a for t, a in zip(ev.per_target.target, ev.per_target.ap)})
     res = headline_resamples(ev) if ev.boot else {}
-    conf = headline_resamples(ev, confirmatory=True) if ev.boot else {}
+    conf = (headline_resamples(ev, confirmatory=True)
+            if ev.boot and "overall_map" in ev.summary else {})
     for metric, value in point.items():
         if metric in ("model", "n_frames", "n_videos", "calibration_all_negatives_below"):
             continue
@@ -358,24 +382,33 @@ def summarise(ev: ModelEval) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def compare_models(evals: dict[str, ModelEval]) -> tuple[pd.DataFrame, pd.DataFrame]:
+def compare_models(evals: dict[str, ModelEval], metric: str = "overall_map",
+                   confirmatory: bool = True) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Confirmatory: pairwise differences in overall Cholec80 mAP (B = all resamples),
     two-sided bootstrap p, Holm-Bonferroni at 0.05. Plus the RQ2 order-flip fraction:
-    per pair, the share of targets whose model order differs between rephrasings."""
+    per pair, the share of targets whose model order differs between rephrasings.
+
+    With ``confirmatory=False`` (e.g. ``metric="cvs_map"`` on Endoscapes, section 4.6:
+    descriptive) the difference gets a 95% interval from the first 2,000 resamples and
+    no p-value or Holm adjustment."""
     names = list(evals)
-    conf = {m: headline_resamples(evals[m], confirmatory=True)["overall_map"]
-            for m in names if evals[m].boot}
+    if confirmatory:
+        res = {m: headline_resamples(evals[m], confirmatory=True)[metric]
+               for m in names if evals[m].boot}
+    else:
+        res = {m: headline_resamples(evals[m])[metric] for m in names if evals[m].boot}
     rows, flips = [], []
     for i, a in enumerate(names):
         for b in names[i + 1:]:
             ea, eb = evals[a], evals[b]
             pair = f"{a} - {b}"
-            row = {"pair": pair, "diff": ea.summary["overall_map"] - eb.summary["overall_map"]}
-            if a in conf and b in conf:
-                d = conf[a] - conf[b]
+            row = {"pair": pair, "diff": ea.summary[metric] - eb.summary[metric]}
+            if a in res and b in res:
+                d = res[a] - res[b]
                 lo, hi = percentile_ci(d)
-                row.update(ci_low=float(lo), ci_high=float(hi), n_boot=len(d),
-                           p=bootstrap_p(d))
+                row.update(ci_low=float(lo), ci_high=float(hi), n_boot=len(d))
+                if confirmatory:
+                    row["p"] = bootstrap_p(d)
             rows.append(row)
             qa = ea.per_query.set_index("qid").ap
             qb = eb.per_query.set_index("qid").ap

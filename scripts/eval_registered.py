@@ -41,10 +41,15 @@ SPLITS = {"val": ("videos_1-40", list(range(33, 41))),
           "test": ("videos_41-80", list(range(41, 81)))}
 
 
-def text_embeddings(model: str, texts: list[str]) -> dict[str, np.ndarray]:
-    """Encode once per model revision; the cache must hold exactly these strings."""
+def text_embeddings(model: str, texts: list[str], root: Path = ROOT,
+                    suffix: str = "") -> dict[str, np.ndarray]:
+    """Encode once per model revision; the cache must hold exactly these strings.
+
+    ``suffix`` names a separate cache file for another query set (Endoscapes:
+    ``"_endoscapes"``), so the Cholec80 cache that later analyses reuse is never
+    overwritten."""
     rev = _SPECS[model].revision
-    path = ROOT / "data" / "text_emb" / f"{model}_{rev[:12]}.npz"
+    path = root / "data" / "text_emb" / f"{model}_{rev[:12]}{suffix}.npz"
     if path.exists():
         z = np.load(path, allow_pickle=False)
         if list(z["texts"]) == texts and str(z["revision"]) == rev:

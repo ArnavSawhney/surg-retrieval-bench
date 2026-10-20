@@ -18,6 +18,7 @@ spread can also be read by rephrasing type:
 from __future__ import annotations
 
 from srb.datasets.cholec80 import PHASES, TOOL_COLUMNS, TOOLS
+from srb.datasets.endoscapes import RELEVANT_COLUMNS, UNANIMOUS_COLUMNS
 from srb.retrieval import Query
 
 REPHRASING_ROLES = ("technical", "action", "visual", "lay", "short")
@@ -195,6 +196,23 @@ def cholec80_queries() -> list[Query]:
     for tool, col in zip(TOOLS, TOOL_COLUMNS):
         for r, text in enumerate(TOOL_QUERIES[tool], 1):
             out.append(Query(f"tool_{_slug(tool)}_r{r}", text, "tool", col))
+    for i, text in enumerate(NEGATIVE_QUERIES, 1):
+        out.append(Query(f"neg_{i}", text, "negative", None))
+    return out
+
+
+def endoscapes_queries(unanimous: bool = False) -> list[Query]:
+    """The 15 CVS strings + the same negatives, for the Endoscapes2023 test frames.
+
+    Relevance is the registered majority vote (>= 2 of 3 annotators, manifest columns
+    ``c1``-``c3``), or, with ``unanimous=True``, the secondary not-registered 3-of-3 rule
+    (``c1_unanimous``...; Deviations, 2026-10-20). The strings are the same either way.
+    """
+    cols = UNANIMOUS_COLUMNS if unanimous else RELEVANT_COLUMNS
+    out: list[Query] = []
+    for crit, col in zip(CVS_QUERIES, cols):
+        for r, text in enumerate(CVS_QUERIES[crit], 1):
+            out.append(Query(f"cvs_{_slug(crit)}_r{r}", text, "cvs", col))
     for i, text in enumerate(NEGATIVE_QUERIES, 1):
         out.append(Query(f"neg_{i}", text, "negative", None))
     return out
