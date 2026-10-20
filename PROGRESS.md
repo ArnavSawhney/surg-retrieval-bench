@@ -5,14 +5,16 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 19 Oct 2026 (RQ5 tagging complete; RQ5 analysis not run).
+**Last updated:** 20 Oct 2026 (RQ5 run once and compared with the predictions).
 **`prereg-v1` = `ff2b6e5`**, on GitHub since 2026-10-12T14:02:13Z.
-**Status:** RQ1/RQ2 (`c1ed8ed`), RQ3 (`6918ba5`) and RQ4 (`4f489a7`) run once on the test split
-and compared with the predictions in `docs/results_vs_predictions.md`. Week 5: section 4.4 clarified
+**Status:** RQ1/RQ2 (`c1ed8ed`), RQ3 (`6918ba5`), RQ4 (`4f489a7`) and RQ5 (`b888322`) run once on
+the test split and compared with the predictions in `docs/results_vs_predictions.md`. Week 5: section 4.4 clarified
 under Deviations (`eebebfe`), temporal models implemented (`c423454`), **validation run
 done (dev)**; TCN sensitivity analysis (not registered, `3bbe61f`); **RQ4 test run done
 once** at `3bbe61f`; RQ4 verdicts in `9303cff` (RQ4a holds, RQ4b and RQ4c falsified). RQ5 tagging complete: 816 frames,
-stopping rule met, tags frozen (LOG.md, 19 Oct; out-of-body Deviation `84b7ec7`). No GPU spend since Week 3.
+stopping rule met, tags frozen (LOG.md, 19 Oct; out-of-body Deviation `84b7ec7`); RQ5c
+clarified (`d85eb56`), RQ5 run once at `854398d`, verdicts in `cc3e19b` (RQ5a holds, RQ5b
+and RQ5c falsified). No GPU spend since Week 3.
 
 Start a new session by reading the local, git-excluded planning notes (see `.git/info/exclude`)
 — they are the source of truth for scope and hard rules, and they are private: never
@@ -395,12 +397,16 @@ Week 5 (LOG.md, 13 Oct):
    **Tagging done** (19 Oct): 816 frames, stopping rule met; 11 out of body. Frozen
    files and SHA-256s in LOG.md: `data/rq5/tags.csv` (raw), `out_of_body.csv`,
    `tags_corrected.csv` (what the analysis reads).
-7. **Next, ask Arnav first:** the RQ5 analysis (per-tag metrics on `tags_corrected.csv`,
-   registered, plus the out-of-body-excluded secondary analysis, not registered).
+7. **Done, RESULT** (19 Oct): RQ5c clarified under Deviations before any per-tag number
+   (`d85eb56`); `scripts/eval_rq5.py` (`854398d`, `--check-only` passed first); run once
+   on a clean tree (`b888322`; `results/test/rq5_*.csv`, 284 rows appended, settings `rq5`
+   and `rq5-oob-excluded-not-registered`); verdicts in `docs/results_vs_predictions.md`
+   (`cc3e19b`): RQ5a holds, RQ5b falsified, RQ5c falsified (by 0.0012 vs SigLIP).
 
 Rules that still bind: the pre-registration is frozen (changes only under `## Deviations`,
-shown to Arnav first); **no rerun of the RQ1/RQ2 test split**; no RQ5 verdict
-until Arnav asks; the optional image-only encoder can only be exploratory now (LOG.md,
+shown to Arnav first); **no rerun of any test-split analysis** (RQ1–RQ5 have
+each run once); RQ5 commits that compute no result are pushed without asking (Arnav,
+18 Oct); the optional image-only encoder can only be exploratory now (LOG.md,
 Parked).
 
 **Test scoring is unlocked** (`1759cb4`, after `ff2b6e5`): `evaluate()` and
@@ -418,7 +424,6 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 
 * GPU spend so far is in §1b (two L4 sessions, Week 3, ₹230.07); no instance is running,
   and none is needed in Weeks 4–5.
-* Approve running the RQ5 analysis (tags are frozen).
 * Close VS Code and Chrome before any Mac indexing (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
   Endoscapes waits until Week 8 (decided 12 Oct).

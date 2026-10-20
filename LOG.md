@@ -342,6 +342,35 @@ computed.
 
 The RQ5 analysis reads only these files; it has not been run.
 
+### 2026-10-19 — RQ5: clarification, analysis run once (RESULT), verdicts
+
+At Arnav's request, in this order:
+
+* **RQ5c clarified before any per-tag number** (Deviations, `d85eb56`): judged on
+  linear-probe phase accuracy like RQ5a; drop = clean − tag (positive = worse); mean over
+  the five artefacts unweighted; zero-shot drops descriptive only; RQ5b's "that drop" is
+  blur's, averaged over the four backbones.
+* `scripts/eval_rq5.py` + tests (`854398d`). `--check-only` first: frozen tag hashes OK,
+  `tags_corrected.csv` = raw tags + out-of-body answers, all four models reproduce the
+  registered overall zero-shot r1–r5 and probe test accuracies to 1e-12, all 816 tagged
+  frames found in each index; stopped before any per-tag number.
+* **Run once** on a clean tree at `854398d` (`b888322`): 816 frames from 40 videos,
+  paired video-level bootstrap over those 40 videos (first 2,000 resamples of
+  `default_rng(20261011)`); 284 rows appended to `results.csv` (settings `rq5` and
+  `rq5-oob-excluded-not-registered`, prefix byte-identical); tables
+  `results/test/rq5_*.csv`.
+* **Verdicts** in `docs/results_vs_predictions.md` (`cc3e19b`), registered analysis only,
+  probe numbers recomputed independently (all agree). Probe drop, mean over backbones:
+  blur +0.1216 [0.0575, 0.1854] > blood +0.1137 > smoke +0.0914 > glare +0.0295 >
+  occlusion −0.0356. **RQ5a holds** (blur largest, but its lead over blood and smoke has
+  paired intervals including zero); **RQ5b falsified** (12.2 points ≥ 5, whole interval
+  above 5); **RQ5c falsified** (PeskaVLP mean drop 0.0518 < CLIP 0.0879 but > SigLIP
+  0.0506, by 0.0012 [−0.0932, +0.0917]). The out-of-body-excluded analysis and the
+  zero-shot drops are in no verdict.
+
+All five research questions have now been run once on the test split and compared with
+the predictions.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.
