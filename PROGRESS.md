@@ -5,7 +5,7 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 20 Oct 2026 (RQ5 run once and compared with the predictions).
+**Last updated:** 20 Oct 2026 (Week 6 started: Endoscapes CVS retrieval, then figures).
 **`prereg-v1` = `ff2b6e5`**, on GitHub since 2026-10-12T14:02:13Z.
 **Status:** RQ1/RQ2 (`c1ed8ed`), RQ3 (`6918ba5`), RQ4 (`4f489a7`) and RQ5 (`b888322`) run once on
 the test split and compared with the predictions in `docs/results_vs_predictions.md`. Week 5: section 4.4 clarified
@@ -262,6 +262,15 @@ Each tar SHA-256-checked on both ends, untarred, reported **cached** by `build_i
 L4 total for Week 3: **₹230.07** over two sessions. Remote run log:
 `data/jarvis_out/run_41-80.log`.
 
+**Deleted on 20 Oct 2026 to free disk (Arnav):** the three Colab bundles
+`data/colab/srb_bundle_videos_{1-5,6-40,41-80}.tar` and `data/checkpoints/peskavlp/PeskaVLP.zip`.
+The frames in `data/cholec80/frames/` are the source, and `scripts/make_colab_bundle.sh`
+rebuilds a bundle if one is ever needed (a rebuilt tar has a different SHA-256, since the
+git hash and file mtimes differ). The bundle SHA-256s in `data/colab/SHA256SUMS` are now
+marked historical. `PeskaVLP.pth` is kept and its SHA-256 pin is still checked at every
+load; the zip's pin (`d82e2710…`) can no longer be re-checked locally (a re-download from
+the unversioned Seafile URL would have to match it). About 21 GB free afterwards.
+
 ## 2. Environment (reproduce this exactly)
 
 * **Python 3.11.15** from `/opt/homebrew/bin/python3.11`. Venv at `.venv`.
@@ -285,8 +294,9 @@ L4 total for Week 3: **₹230.07** over two sessions. Remote run log:
   `85e858998eec47614614b89f6af1363e0ad3f47b`;
   `python3.11 -m venv .venv-surgvlp && .venv-surgvlp/bin/pip install -r envs/surgvlp-requirements.txt`;
   download `PeskaVLP.zip` (URL in `src/srb/models/peskavlp_pins.py`) into
-  `data/checkpoints/peskavlp/` with parallel range requests and unzip it. The script
-  checks the commit and both SHA-256 pins before loading. Both `third_party/` and
+  `data/checkpoints/peskavlp/` with parallel range requests, check it against the zip
+  pin, and unzip it. The script checks the commit and the `PeskaVLP.pth` SHA-256 pin
+  before loading (the zip itself was deleted locally on 20 Oct, §1b). Both `third_party/` and
   `.venv-surgvlp/` are gitignored. Smoke: `.venv-surgvlp/bin/python scripts/peskavlp_encode.py smoke`.
 
 ---
@@ -426,5 +436,8 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
   and none is needed in Weeks 4–5.
 * Close VS Code and Chrome before any Mac indexing (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
-  Endoscapes waits until Week 8 (decided 12 Oct).
+  Endoscapes is fetched by range request (Week 6), not from these copies.
+* Disk (20 Oct): ~21 GB free after Arnav deleted the Colab bundles and `PeskaVLP.zip`
+  (§1b). Rebuild a bundle with `scripts/make_colab_bundle.sh` only if a GPU run needs one;
+  the `PeskaVLP.zip` pin can no longer be re-checked locally.
 * Optional: add a description and topics to the GitHub repo; it was created bare.
