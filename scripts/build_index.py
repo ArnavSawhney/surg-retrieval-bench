@@ -93,6 +93,8 @@ def main() -> None:
     ap.add_argument("--bench", action="store_true")
     ap.add_argument("--bench-only", action="store_true")
     ap.add_argument("--bench-frames", type=int, default=256)
+    ap.add_argument("--bench-sizes", type=int, nargs="+", default=[8, 16, 32, 64],
+                    help="batch sizes to time (large ones swap on the 8 GB Mac, trap 11)")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--dtype", choices=["auto", "float32", "float16"], default="auto",
                     help="compute dtype; auto = registry default (fp16 iff cuda)")
@@ -117,7 +119,7 @@ def main() -> None:
     rates = {}
     bs = args.batch_size or spec.default_batch_size
     if args.bench or args.bench_only:
-        bs, rates = bench(backbone, paths, n=args.bench_frames)
+        bs, rates = bench(backbone, paths, sizes=args.bench_sizes, n=args.bench_frames)
         print(f"using batch size {bs}")
         if args.bench_only:
             print(f"bench only ({args.bench_frames} frames, {backbone.device.type}, "

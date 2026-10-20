@@ -198,7 +198,7 @@ def cmd_index(args) -> None:
     enc = PeskaVLP(args.device)
     paths = [root / p for p in manifest.path]
     if args.bench_only:
-        _, rates = bench(enc, paths, n=args.bench_frames)
+        _, rates = bench(enc, paths, sizes=args.bench_sizes, n=args.bench_frames)
         print(f"bench only ({args.bench_frames} frames, {enc.device.type}, float32): "
               f"{rates}; nothing written")
         return
@@ -235,6 +235,7 @@ def main() -> None:
     i.add_argument("--videos")
     i.add_argument("--bench-only", action="store_true")
     i.add_argument("--bench-frames", type=int, default=64)
+    i.add_argument("--bench-sizes", type=int, nargs="+", default=[8, 16, 32, 64])
     i.add_argument("--batch-size", type=int, default=PESKAVLP["default_batch_size"])
     i.add_argument("--force", action="store_true")
     sub.add_parser("smoke", help="plumbing check on synthetic images")
