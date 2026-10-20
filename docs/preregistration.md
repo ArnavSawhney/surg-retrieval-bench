@@ -712,3 +712,86 @@ were complete and frozen (816 frames; SHA-256 of the three tag files in `LOG.md`
 
 **Affects.** No registered choice changes; this fixes how RQ5c, and the averaging in
 RQ5a and RQ5b, are computed.
+
+### 2026-10-20 — clarification of sections 1.2, 3.3 and 4.1 for Endoscapes2023 (no protocol change), and a triggered secondary analysis (not registered)
+
+**Source files.** Read from the official archive by HTTP range request (CRC-32 checked):
+`all_metadata.csv`, `train_vids.txt`, `val_vids.txt`, `test_vids.txt`, `README.md` and
+`test/annotation_{coco,coco_vid,ds_coco}.json`.
+
+**Evaluated frames (1.2).** The CVS-annotated frames of the official test split are the
+rows of `all_metadata.csv` with `is_ds_keyframe == True` and `vid` in `test_vids.txt`
+(40 videos, public IDs 162–201): **1,799 frames**, 7–178 per video, 5 s apart. They are
+exactly the images of `test/annotation_ds_coco.json`. The other 47,723 frames of the
+archive also carry `C1`–`C3` values, but these have no per-annotator columns and are
+derived, not annotated; they are not used. The 228 frames that are in `test/` but not in
+`all/` (videos 190 and 194) include no keyframe.
+
+**Relevance (1.2, 3.5).** The release gives each annotator's binary `[C1, C2, C3]`
+(`cvs_annotator_1..3`), and every one of the 11,090 keyframes has all three. A frame is
+relevant to criterion C*k* iff **at least 2 of the 3 annotators** marked it achieved. The
+code asserts that this equals `Ck ≥ 0.5` (the released mean) on every frame; it does on
+all 11,090. The rule is therefore applied literally, and it is the authors' own ground
+truth ("majority vote for each criterion", Murali et al., arXiv:2312.12429). On the
+1,799 test frames, R (prevalence) = **C1 423 (0.2351), C2 302 (0.1679), C3 501
+(0.2785)**.
+
+**Unanimity secondary, rule fixed before any image was fetched.** The authors report low
+inter-rater agreement (Cohen's κ averaged over the three annotator pairs: C1 0.33,
+C2 0.53, C3 0.44; arXiv:2312.12429). Rule: if, for any criterion, the 2–1 splits are
+≥ 20% of the positive test keyframes, a unanimity analysis (relevant iff 3 of 3) is added
+for all three criteria, labelled "unanimity, not registered". Counts (labels only):
+
+| criterion | positives (≥ 2 of 3) | 2–1 | 3–0 | share 2–1 |
+|---|---|---|---|---|
+| C1 | 423 | 346 | 77 | 0.818 |
+| C2 | 302 | 164 | 138 | 0.543 |
+| C3 | 501 | 279 | 222 | 0.557 |
+
+**Outcome: triggered** (all three ≥ 20%). Unanimity R (prevalence): C1 77 (0.0428),
+C2 138 (0.0767), C3 222 (0.1234). The registered analysis and every headline remain
+majority vote; the unanimity numbers enter no headline and no `results.csv` row without
+the "not registered" label.
+
+**Preprocessing.** As for Cholec80 (1.1): each released JPEG is resized to a 448 px short
+side (bicubic) and re-encoded at JPEG q90, then passed to each model's own processor. This
+is a second JPEG encode. The image size is read from every fetched JPEG (not from the COCO
+`width`/`height`, which are swapped in 1,487 of the 1,799 test entries); all must be equal
+and 854×480 (or 480×854), or the run stops.
+
+**Device and dtype.** All four Endoscapes indexes are computed in **float32 on Apple MPS**
+and stored in float16. The Cholec80 indexes of CLIP, SigLIP and MedSigLIP were computed in
+float16 on an L4 (Deviations, 2026-10-13); float16 vs float32 on the same 512 frames gave
+min cosine 0.99994 / 0.99982 / 0.99997 (all ≥ 0.9998). PeskaVLP is float32 on MPS for both
+datasets. `meta.json` records the dtype.
+
+**Uncertainty (4.6).** Paired video-level bootstrap over the 40 Endoscapes test videos,
+first 2,000 resamples of `default_rng(20261011)`, descriptive only. Because n = 40 as for
+Cholec80, the resample index matrix is **identical** to Cholec80's; here it is mapped to
+the Endoscapes test IDs sorted ascending (162–201), and that order is recorded in the run's
+`run.json`. No inference spans the two datasets.
+
+**Metrics (4.1), on the 1,799-frame pool.** Headline: per criterion, the mean AP over the
+five rephrasings, with prevalence and lift; **CVS mAP** = mean over C1–C3. Secondary:
+R-Precision; per-video AP over the videos where the criterion has R > 0 (C1 25, C2 20,
+C3 23 of 40; the count is reported); the prompt ensemble as a separate system. Descriptive:
+P@10, P@50, distinct videos in the top 50; the calibration check (the 7 negatives against
+the three CVS target means, over the 1,799 frames); and the RQ2 quantities (SD and range
+over rephrasings per criterion, mean AP by role, and the pairwise order-change fraction,
+which is coarse with 3 targets). Zero-shot classification (4.2) and tool mAP do not apply:
+Endoscapes has no phase or tool labels, and the criteria are not exclusive classes.
+
+**"Cross-dataset generalisation" (1.2)** means each zero-shot model's CVS mAP on the
+Endoscapes test frames, reported descriptively. Section 5 makes no CVS prediction, so no
+verdict is given.
+
+**Overlap.** No Endoscapes test video is a Cholec80 or CholecT50 video
+(`camma_dataset_overlaps` @ `8347b9f`, README summary; `overlap.py`).
+
+**Test-set numbers seen.** Written before any Endoscapes image was fetched and before any
+Endoscapes score on any split existed. Only the label and split files above had been read.
+Cholec80 RQ1–RQ5 test numbers existed.
+
+**Affects.** No registered choice changes. Fixes the Endoscapes frame set, relevance
+source, preprocessing, device, resample mapping and metric pool; adds one secondary,
+not-registered unanimity analysis.
