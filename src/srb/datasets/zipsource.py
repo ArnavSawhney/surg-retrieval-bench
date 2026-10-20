@@ -122,6 +122,56 @@ class HTTPRangeFile(io.RawIOBase):
         return n
 
 
+def read_small_member(source: str, zf: zipfile.ZipFile, name: str,
+                      rangefile: "HTTPRangeFile | None" = None) -> bytes:
+    """Bytes of one small member (an image, a label file), size- and CRC-32-checked.
+
+    For a URL the member's local header and compressed bytes are read through
+    ``HTTPRangeFile`` (at most 1 MiB per request, trap 7); pass one ``rangefile`` per
+    thread to reuse it across members. A local zip is read through ``zipfile``. Raises
+    ``OSError`` on a size or CRC mismatch.
+    """
+    info = zf.getinfo(name)
+    if not is_url(source):
+        data = zf.read(info)  # zipfile checks the CRC itself
+    else:
+        f = rangefile or HTTPRangeFile(source)
+        f.seek(_data_offset_from(f, info))
+        comp = bytearray(info.compress_size)
+        view, got = memoryview(comp), 0
+        while got < len(comp):
+            n = f.readinto(view[got:])
+            if not n:
+                raise OSError(f"{name}: archive ended after {got} of {len(comp)} bytes")
+            got += n
+        if info.compress_type == zipfile.ZIP_DEFLATED:
+            data = zlib.decompress(bytes(comp), -15)
+        elif info.compress_type == zipfile.ZIP_STORED:
+            data = bytes(comp)
+        else:
+            raise OSError(f"unsupported compression {info.compress_type} for {name}")
+    if len(data) != info.file_size or zlib.crc32(data) != info.CRC:
+        raise OSError(f"{name}: size/CRC mismatch (got {len(data)} bytes, crc "
+                      f"{zlib.crc32(data):08x}; expected {info.file_size}, {info.CRC:08x})")
+    return data
+
+
+def _data_offset_from(f, info: zipfile.ZipInfo) -> int:
+    """Like ``_data_offset``, reading the local header through an open range file."""
+    f.seek(info.header_offset)
+    head = bytearray(30)
+    got = 0
+    while got < 30:
+        n = f.readinto(memoryview(head)[got:])
+        if not n:
+            raise OSError(f"truncated local header for {info.filename}")
+        got += n
+    if bytes(head[:4]) != b"PK\x03\x04":
+        raise OSError(f"bad local header signature for {info.filename}")
+    name_len, extra_len = struct.unpack("<HH", bytes(head[26:30]))
+    return info.header_offset + 30 + name_len + extra_len
+
+
 def open_zip(source: str) -> zipfile.ZipFile:
     """``ZipFile`` over a local path or an http(s) URL. Nothing is extracted."""
     if is_url(source):

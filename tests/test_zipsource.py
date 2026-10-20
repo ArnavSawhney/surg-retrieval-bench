@@ -132,3 +132,19 @@ def test_curl_range_detects_an_oversized_part(tmp_path):
     out.write_bytes(b"x" * 20)
     with pytest.raises(OSError, match="corrupt part"):
         zs._curl_range("https://x.invalid/z", 0, 9, out)
+
+
+@pytest.mark.parametrize("member", ["videos/v.mp4", "stored.txt"])
+def test_read_small_member_url_path(local_zip, fake_url, member):
+    """Local header parsed through the range file, then inflate + CRC."""
+    path, _ = local_zip
+    zf = zipfile.ZipFile(path)
+    assert zs.read_small_member(fake_url, zf, member) == zf.read(member)
+
+
+def test_read_small_member_crc_mismatch_raises(local_zip, fake_url):
+    path, _ = local_zip
+    zf = zipfile.ZipFile(path)
+    zf.getinfo("stored.txt").CRC ^= 1
+    with pytest.raises(OSError, match="CRC"):
+        zs.read_small_member(fake_url, zf, "stored.txt")

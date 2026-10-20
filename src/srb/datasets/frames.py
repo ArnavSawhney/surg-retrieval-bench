@@ -105,3 +105,15 @@ def extract_frames(video: Path, frame_indices, out_dir: Path, *, short_side: int
         raise RuntimeError(f"{video}: expected {len(wanted)} frames, got {len(paths)} "
                            f"(+{len(extra) // frame_bytes} extra)")
     return paths
+
+
+def resize_image(src: Path, dest: Path, *, short_side: int = 448, quality: int = 90) -> tuple[int, int]:
+    """Resize an image file to ``short_side`` (bicubic, aspect kept) and save it as JPEG
+    at exactly ``quality``. For released frames (Endoscapes); Cholec80 frames are scaled
+    by ffmpeg in ``extract_frames``. Returns the source (width, height)."""
+    with Image.open(src) as im:
+        size = im.size
+        out = im.convert("RGB").resize(scaled_size(*size, short_side), Image.Resampling.BICUBIC)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    out.save(dest, quality=quality)
+    return size
