@@ -412,6 +412,11 @@ CLIP, SigLIP and MedSigLIP on a Jarvis Labs L4 in float16, as for Cholec80 (Devi
   so the unanimity secondary is in, labelled "not registered"); all 1,799 fetched JPEGs
   854×480; all 1,799 frames 797×448 with Pillow's q90 quantisation tables.
 
+* **Pushed:** `d81c770` (Deviations, 2026-10-22, with this entry) after `pytest` 862
+  passed, the privacy check (no `bet1_plan` / `CLAUDE_CODE` file tracked) and the author
+  check (`ArnavSawhney`); GitHub `main` = `d81c770`, push received
+  **2026-10-22T12:47:21Z** (GitHub activity API, `28979dd..d81c770`).
+
 **No Endoscapes score exists.** Next: `eval_endoscapes.py --check-only` on the pushed
 tree; the single test run waits for Arnav's go.
 
