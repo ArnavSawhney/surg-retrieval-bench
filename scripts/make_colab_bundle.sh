@@ -3,6 +3,9 @@
 #
 #   bash scripts/make_colab_bundle.sh 6-40      -> data/colab/srb_bundle_videos_6-40.tar
 #   bash scripts/make_colab_bundle.sh           -> every video in the manifest
+#   bash scripts/make_colab_bundle.sh endoscapes -> data/colab/srb_bundle_endoscapes.tar
+#        (Endoscapes2023 test keyframes + manifest, and Cholec80 video04 + the Cholec80
+#         manifest for the cross-device check; for scripts/gpu_index.sh)
 #
 # Bundles are made in chunks (6-40 now, 41-80 after prereg-v1) so that only one sits in
 # Drive at a time: delete the previous bundle from MyDrive/srb/ before uploading the
@@ -23,6 +26,13 @@ trap 'rm -rf "$STAGE"' EXIT
 [ -f data/cholec80/manifest.parquet ] || { echo "no manifest; run extract_frames.py" >&2; exit 1; }
 
 # Which videos to pack: the requested range, else every video in the manifest.
+# For endoscapes, only video04 (the cross-device check) from Cholec80.
+EXTRA=()
+if [ "$SPEC" = endoscapes ]; then
+  [ -f data/endoscapes/manifest.parquet ] || { echo "no endoscapes manifest; run fetch_endoscapes.py" >&2; exit 1; }
+  SEL="endoscapes video04"
+  EXTRA=(data/endoscapes/manifest.parquet data/endoscapes/frames)
+else
 SEL=$(.venv/bin/python - "$SPEC" <<'EOF'
 import sys
 import pandas as pd
@@ -37,6 +47,7 @@ if missing:
 print(video_tag(want), " ".join(f"video{v:02d}" for v in want))
 EOF
 )
+fi
 read -r TAG VIDEOS <<< "$SEL"
 OUT=data/colab/srb_bundle_${TAG}.tar
 echo "packing $TAG: $VIDEOS"
@@ -57,7 +68,7 @@ echo "git: $(cat "$STAGE/GIT_HASH")"
 
 mkdir -p data/colab
 tar -cf "$OUT" -T "$STAGE/code.txt" \
-  data/cholec80/manifest.parquet \
+  data/cholec80/manifest.parquet "${EXTRA[@]}" \
   $(for v in $VIDEOS; do echo "data/cholec80/frames/$v"; done)
 tar -rf "$OUT" -C "$STAGE" GIT_HASH
 

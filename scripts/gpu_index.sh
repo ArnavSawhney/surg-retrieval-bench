@@ -11,8 +11,12 @@
 # On the GPU machine, with HF_TOKEN in the environment only (for medsiglip-448; pipe it
 # in over ssh stdin, never as an argument or into a file):
 #   bash gpu_index.sh /home 1-40 clip-vit-l14 siglip-so400m-384 medsiglip-448
-# Output: /home/out/index_<model>_videos_<videos>.tar; check its SHA-256, copy it back,
-# and untar at the repo root (build_index.py then reports it as cached).
+#   bash gpu_index.sh /home endoscapes clip-vit-l14 siglip-so400m-384 medsiglip-448
+#     (Endoscapes2023 test keyframes, from `make_colab_bundle.sh endoscapes`; PeskaVLP
+#      stays on the Mac, it runs in its own environment)
+# Output: /home/out/index_<model>_videos_<videos>.tar (or _endoscapes_test.tar); check
+# its SHA-256, copy it back, and untar at the repo root (build_index.py then reports it
+# as cached).
 #
 # Why float16: on the L4, float32 ran SigLIP at 10.3 frames/s and MedSigLIP at 7.3;
 # float16 at 34.3 and 26.5 (3.3-3.6x). On the same 512 frames, float16 vs float32 had
@@ -26,7 +30,7 @@ shift 2
 OUT=$BASE/out
 mkdir -p "$BASE/srb" "$OUT"
 cd "$BASE/srb"
-for t in "$BASE"/srb_bundle_videos_*.tar; do tar -xf "$t"; done  # same-hash bundles only
+for t in "$BASE"/srb_bundle_*.tar; do tar -xf "$t"; done  # same-hash bundles only
 echo "git $(cat GIT_HASH); frame dirs $(ls data/cholec80/frames | wc -l)"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
@@ -53,10 +57,15 @@ if cos.min() < 0.999:
     raise SystemExit("GPU index disagrees with the Mac index; do not use it")
 EOF
 
+if [ "$VIDEOS" = endoscapes ]; then
+  SEL=(--dataset endoscapes); TAG=endoscapes_test
+else
+  SEL=(--videos "$VIDEOS"); TAG=videos_$VIDEOS
+fi
 for MODEL in "$@"; do
   echo "=== $MODEL $VIDEOS start $(date -u +%FT%TZ)"
-  $PY scripts/build_index.py --model "$MODEL" --videos "$VIDEOS" --dtype float16 --batch-size 32
-  DIR=data/index/$MODEL/videos_$VIDEOS
+  $PY scripts/build_index.py --model "$MODEL" "${SEL[@]}" --dtype float16 --batch-size 32
+  DIR=data/index/$MODEL/$TAG
   $PY - <<EOF
 import numpy as np
 from pathlib import Path
@@ -68,7 +77,7 @@ print(f"CHECKED $DIR: {e.shape}, norms {n.min():.4f}-{n.max():.4f}, "
       f"{meta['frames_per_sec']} frames/s on {meta.get('gpu')}, {meta['compute_dtype']}, "
       f"git {meta['git_hash'][:12]}", flush=True)
 EOF
-  tar -cf "$OUT/index_${MODEL}_videos_${VIDEOS}.tar" "$DIR"
+  tar -cf "$OUT/index_${MODEL}_${TAG}.tar" "$DIR"
   echo "=== $MODEL done $(date -u +%FT%TZ)"
 done
 echo ALL_DONE
