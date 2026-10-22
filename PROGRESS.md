@@ -5,7 +5,7 @@ anything. `LOG.md` stays the one-line-per-session record required by the plan; t
 file holds the detail: environment facts, what is verified, what is next, and the
 traps already hit.
 
-**Last updated:** 20 Oct 2026 (Week 6 started: Endoscapes CVS retrieval, then figures).
+**Last updated:** 22 Oct 2026 (Week 6: the four Endoscapes test indexes built, §1c; no Endoscapes score yet).
 **`prereg-v1` = `ff2b6e5`**, on GitHub since 2026-10-12T14:02:13Z.
 **Status:** RQ1/RQ2 (`c1ed8ed`), RQ3 (`6918ba5`), RQ4 (`4f489a7`) and RQ5 (`b888322`) run once on
 the test split and compared with the predictions in `docs/results_vs_predictions.md`. Week 5: section 4.4 clarified
@@ -271,6 +271,34 @@ marked historical. `PeskaVLP.pth` is kept and its SHA-256 pin is still checked a
 load; the zip's pin (`d82e2710…`) can no longer be re-checked locally (a re-download from
 the unversioned Seafile URL would have to match it). About 21 GB free afterwards.
 
+## 1c. Week 6 (22 Oct 2026): Endoscapes2023 test indexes
+
+On the 8 GB Mac (20 Oct) MedSigLIP's bench never produced a timing (paged out, stopped),
+SigLIP's swapped at batch 64, and the Mac restarted about a minute into the full CLIP
+index (no error, no crash report; Deviations, 2026-10-22). So CLIP, SigLIP and MedSigLIP
+went to a Jarvis Labs L4 by the Week 3 procedure: `make_colab_bundle.sh
+endoscapes` → `gpu_index.sh /home endoscapes clip-vit-l14 siglip-so400m-384
+medsiglip-448` (both modes added in `d2bec95`). The bundle (208 MB, git `d2bec95`, SHA-256
+`f298c2ac24ca…` in `data/colab/SHA256SUMS`) was matched on the instance and deleted
+locally afterwards. PeskaVLP was built on the Mac.
+
+**L4 instance 543072**, on-demand ₹41.31/hr, 12:16:39Z to about 12:22:50Z: **6 min,
+₹4.86**, destroyed, no storage left. Cross-check CLIP video04 L4 float16 vs Mac float32:
+min cosine 0.99977 (bar 0.999).
+
+| model | device, dtype | frames/s | norms | index tar SHA-256 (first 12) |
+|---|---|---|---|---|
+| CLIP ViT-L/14 | L4, float16 | 90.94 | 0.9998–1.0002 | `8ac0bb826cba` |
+| SigLIP so400m-384 | L4, float16 | 35.52 | 0.9999–1.0001 | `d649565bb907` |
+| MedSigLIP-448 | L4, float16 | 26.04 | 0.9999–1.0001 | `7eaec4824619` |
+| PeskaVLP | Mac MPS, float32 | 29.29 | — | built locally |
+
+All four: `data/index/<model>/endoscapes_test`, 1,799 rows, git `d2bec95`, batch 32; the
+L4 tars are SHA-256-checked both ends (`data/jarvis_out/SHA256SUMS_endoscapes`) and
+reported cached by `build_index.py --dataset endoscapes`. The full remote run log was not
+kept; `data/jarvis_out/run_endoscapes.filtered.log` holds the monitored lines.
+Endoscapes GPU device and dtype: Deviations, 2026-10-22.
+
 ## 2. Environment (reproduce this exactly)
 
 * **Python 3.11.15** from `/opt/homebrew/bin/python3.11`. Venv at `.venv`.
@@ -432,8 +460,8 @@ done; model count no longer at risk). Closed: #1 (by `prereg-v1`), #3, #5.
 
 ## 6. Manual actions still outstanding for Arnav
 
-* GPU spend so far is in §1b (two L4 sessions, Week 3, ₹230.07); no instance is running,
-  and none is needed in Weeks 4–5.
+* GPU spend so far: §1b (two L4 sessions, Week 3, ₹230.07) and §1c (one L4 session,
+  Week 6, ₹4.86); no instance is running, and none is needed for the Endoscapes run.
 * Close VS Code and Chrome before any Mac indexing (trap 11).
 * Delete or replace the truncated `~/Downloads/cholec80.zip` / `endoscapes.zip`.
   Endoscapes is fetched by range request (Week 6), not from these copies.

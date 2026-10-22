@@ -371,6 +371,50 @@ At Arnav's request, in this order:
 All five research questions have now been run once on the test split and compared with
 the predictions.
 
+### 2026-10-22 — Endoscapes2023: the four test indexes built (L4 float16 + MPS float32)
+
+On 20 Oct the 8 GB Mac could not do it (MPS float32, 64-frame benches, Chrome open, trap
+11): MedSigLIP's bench recorded no timing in 26 min (paged out) and was stopped; SigLIP's
+swapped at batch 64 and was stopped (0.74 frames/s at batch 8); CLIP's finished (2.7
+frames/s), and the Mac restarted unexpectedly about a minute into the full CLIP index
+(19:18 IST; empty `index_clip.log`, no error, no crash report). Arnav approved building
+CLIP, SigLIP and MedSigLIP on a Jarvis Labs L4 in float16, as for Cholec80 (Deviations,
+2026-10-22).
+
+* **Script modes** (`d2bec95`): `make_colab_bundle.sh endoscapes` packs the code, the
+  Endoscapes manifest and keyframes, and Cholec80 video04 + manifest + the Mac CLIP
+  video04 index for the cross-device check; `gpu_index.sh <base> endoscapes <models>`
+  builds `data/index/<model>/endoscapes_test` (`--dataset endoscapes`) and writes
+  `index_<model>_endoscapes_test.tar`.
+* **Bundle** `srb_bundle_endoscapes.tar` (208 MB, git `d2bec95`, clean), SHA-256
+  `f298c2ac24ca18cfc9f74e0ce501fc3ff4a9fb21020a6c85061f26c1018659bc`, matched on the
+  instance; deleted locally afterwards (recorded in `data/colab/SHA256SUMS`; the
+  `endoscapes` mode rebuilds it, with a different hash).
+* **L4 session:** instance 543072, on-demand, created 12:16:39Z, destroyed about
+  12:22:50Z, **6 min, ₹4.86**; no instance, paused instance or filesystem left.
+  Cross-check first: CLIP video04 L4 float16 vs Mac float32, min cosine **0.99977**
+  (bar 0.999), the same as in Week 3.
+
+| model | device, compute dtype | frames/s | norms | index tar SHA-256 (first 12) |
+|---|---|---|---|---|
+| CLIP ViT-L/14 | L4, float16, batch 32 | 90.94 | 0.9998–1.0002 | `8ac0bb826cba` |
+| SigLIP so400m-384 | L4, float16, batch 32 | 35.52 | 0.9999–1.0001 | `d649565bb907` |
+| MedSigLIP-448 | L4, float16, batch 32 | 26.04 | 0.9999–1.0001 | `7eaec4824619` |
+| PeskaVLP | Mac MPS, float32, batch 32 | 29.29 | — | — (built locally, 71 s) |
+
+  Each L4 tar was SHA-256-checked on both ends (`data/jarvis_out/SHA256SUMS_endoscapes`),
+  untarred, and reported **cached** by `build_index.py --dataset endoscapes`. All four
+  indexes are 1,799 rows at git `d2bec95`. The full remote `run.log` was not copied
+  before the instance was destroyed; the monitor's filtered lines (cross-check, per-model
+  start/end, checks) are in `data/jarvis_out/run_endoscapes.filtered.log`.
+* **Checked against the 2026-10-20 clarification, labels and frames only:** 2–1 share of
+  the positives C1 346/423 = 0.818, C2 164/302 = 0.543, C3 279/501 = 0.557 (all ≥ 20%,
+  so the unanimity secondary is in, labelled "not registered"); all 1,799 fetched JPEGs
+  854×480; all 1,799 frames 797×448 with Pillow's q90 quantisation tables.
+
+**No Endoscapes score exists.** Next: `eval_endoscapes.py --check-only` on the pushed
+tree; the single test run waits for Arnav's go.
+
 ## Open decisions
 
 Recorded, deliberately **not** implemented yet.

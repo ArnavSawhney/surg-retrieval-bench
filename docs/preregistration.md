@@ -795,3 +795,30 @@ Cholec80 RQ1–RQ5 test numbers existed.
 **Affects.** No registered choice changes. Fixes the Endoscapes frame set, relevance
 source, preprocessing, device, resample mapping and metric pool; adds one secondary,
 not-registered unanimity analysis.
+
+### 2026-10-22 — device and dtype of the Endoscapes indexes (amends the 2026-10-20 clarification; no protocol change)
+
+The 2026-10-20 entry says all four Endoscapes indexes are float32 on Apple MPS. That was
+the plan when it was written. On the 8 GB Mac (MPS, float32, 64-frame benches, Chrome
+open, 20 October 2026):
+
+- **MedSigLIP:** the bench recorded no timing in 26 minutes (process paged out, in
+  uninterruptible wait) and was stopped; it could not run on the Mac.
+- **CLIP:** the bench finished (2.7 frames/s at batch 8); the Mac then restarted
+  unexpectedly within about a minute of starting the full CLIP index (empty log, no error
+  message, no crash report).
+- **SigLIP:** the bench measured batch 8–32 (0.74–0.43 frames/s), then swapped at batch
+  64 for over 10 minutes and was stopped; its index was never started on the Mac.
+
+On 22 October 2026 the author approved computing the CLIP, SigLIP and MedSigLIP indexes
+in **float16 on an NVIDIA L4**, the same device and dtype as their Cholec80 indexes.
+SigLIP moved with the other two to keep one device and dtype per model across both
+datasets.
+
+- PeskaVLP is float32 on MPS, as stated.
+- Checks: CLIP video04 L4 float16 vs Mac float32, min cosine 0.99977 (bar 0.999);
+  float16 vs float32 on the same 512 frames ≥ 0.9998 for all three (2026-10-13 entry).
+- The licensed frames were processed on the rented instance, as for Cholec80. The
+  instance and its storage were destroyed.
+- The full remote run log was not kept; the filtered monitor log survives.
+- Written before any Endoscapes score existed.
